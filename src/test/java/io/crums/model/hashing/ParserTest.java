@@ -207,6 +207,44 @@ public class ParserTest extends SelfAwareTestCase {
   }
   
   
+  @Test
+  public void testHash7() {
+    Object label = new Object() { };
+
+    String input = "(55 (00)) :11";
+    
+    ByteBuffer expected = concat("11", hash(concat("55", hash("00"))));
+    boolean delimited = false;
+    
+    testExpression(input, expected, delimited, label);
+  }
+  
+  
+  @Test
+  public void testHash8() {
+    Object label = new Object() { };
+
+    String input =
+        "((4c9326bb9805fa8f85882c12eae724cef0c62e118427f5948aefa5c428c43c93 :00"
+        + " 00 a69a323a734632dae3b40aa98428525a8b2882ce1db70511aa21a207cc6f5c69)"
+        + " 00 60d8a8cf13559d223ccc06f2a7df67dd9e8c192748ac3fb673dd07e9b6d79c93)";
+    
+    ByteBuffer expected = concat(concat("00", "4c9326bb9805fa8f85882c12eae724cef0c62e118427f5948aefa5c428c43c93"), "00a69a323a734632dae3b40aa98428525a8b2882ce1db70511aa21a207cc6f5c69");
+    expected = hash(expected);
+    expected = hash(concat(expected, "0060d8a8cf13559d223ccc06f2a7df67dd9e8c192748ac3fb673dd07e9b6d79c93"));
+    boolean delimited = true;
+    
+    testExpression(input, expected, delimited, label);
+  }
+  
+  
+  private ByteBuffer concat(String leftHex, String rightHex) {
+    ByteBuffer out = ByteBuffer.allocate((leftHex.length() + rightHex.length())/2);
+    out.put(hexToBytes(leftHex)).put(hexToBytes(rightHex)).flip();
+    return out;
+  }
+  
+  
   private ByteBuffer concat(ByteBuffer left, String hex) {
     ByteBuffer out = ByteBuffer.allocate(hex.length() / 2 + left.remaining());
     left.mark();

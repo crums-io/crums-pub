@@ -16,9 +16,7 @@ public class ExpressionSymbols {
   
   public final static char FLIP = ':';
   
-  // NOTE: 
-  public final static char RGT = ':';
-  public final static char LFT = ';';
+  public final static char EQU = '=';
   
   
   

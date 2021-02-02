@@ -12,7 +12,8 @@ import io.crums.util.IntegralStrings;
 
 /**
  * An immutable, non-empty sequence of bytes with flexible (whitespace delimitable)
- * hex representation.
+ * hex representation. Note this class was designed before the parser was completed;
+ * it contains unused functionality that is best deleted.
  */
 final class ByteString extends BaseEntity {
   
@@ -88,6 +89,8 @@ final class ByteString extends BaseEntity {
    * Returns the hexadecimal representation of the sequence. <em>May
    * be whitespace delimited</em>: if so, every contiguous hex sequence has even
    * length (i.e. a whole number bytes).
+   * 
+   * @see #bytesHex()
    */
   public String hexSequence() {
     return hex;

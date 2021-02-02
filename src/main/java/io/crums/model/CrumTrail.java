@@ -18,7 +18,11 @@ import java.util.Objects;
 
 import io.crums.io.Serial;
 import io.crums.io.channels.ChannelUtils;
+import io.crums.model.hashing.ExpressionSymbols;
+import io.crums.model.hashing.Statement;
+import io.crums.util.IntegralStrings;
 import io.crums.util.mrkl.Proof;
+import io.crums.util.mrkl.ProofStatement;
 import io.crums.util.mrkl.Tree;
 
 /**
@@ -85,8 +89,6 @@ public class CrumTrail extends Proof implements Serial {
       chain[index] = hash;
     }
     
-    // FIXME: I almost forgot, don't like having to do this
-    // (separate efficiency uses to a psuedo-constructor ?)
     ByteBuffer cbuf = ByteBuffer.allocate(Crum.DATA_SIZE);
     cbuf.put(work);
     // below unnecessary because the code after it validates
@@ -113,8 +115,6 @@ public class CrumTrail extends Proof implements Serial {
     }
     
     
-    // FIXME: I almost forgot, don't like having to do this
-    // (separate efficiency uses to a psuedo-constructor ?)
     ByteBuffer cbuf = ByteBuffer.allocate(Crum.DATA_SIZE);
 
     if (in.remaining() > Crum.DATA_SIZE) {
@@ -220,6 +220,27 @@ public class CrumTrail extends Proof implements Serial {
   @Override
   public int serialSize() {
     return Crum.DATA_SIZE + 8 + HASH_WIDTH * chainLength(leafCount(), leafIndex());
+  }
+  
+  
+  /**
+   * Returns this Merkle proof as a hash statement. On inspecting its LHS, the first
+   * literals a human user sees are the hex of the {@linkplain #crum() crum}'s hash
+   * and the hex of the crum's UTC expressed as an 8-byte sequence (size of long),
+   * seperated by a space character. On the RHS, the user finds the value of the
+   * root of the Merkle tree. This serves as a "full" hash pointer: it can be used to
+   * construct a URL to reference the tree's permanent record at <tt>https://crums.io</tt>.
+   * 
+   * @return a statement that {@linkplain Statement#eval() eval}uates to <tt>true</tt>
+   */
+  public Statement toStatement() {
+    ByteBuffer utcBuffer = ByteBuffer.wrap(new byte[8]);
+    utcBuffer.putLong(crum.utc()).flip();
+    StringBuilder merkleItem = new StringBuilder(HASH_WIDTH * 2 + 24)
+        .append(ExpressionSymbols.LFT_PRNS)
+        .append(crum.hashHex()).append(' ').append(IntegralStrings.toHex(utcBuffer))
+        .append(ExpressionSymbols.RGT_PRNS);
+    return ProofStatement.createItemStatement(this, merkleItem);
   }
   
 }

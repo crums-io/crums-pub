@@ -17,11 +17,12 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import io.crums.util.Lists;
 
 /**
- * Parser for the grammer. This is a super-simple grammer, so we do away with a
+ * Base parser for the grammar. This is a super-simple grammar, so we do away with a
  * formal specification.
  * 
  * <h3>Grammer</h3>
@@ -34,11 +35,12 @@ import io.crums.util.Lists;
  *  concatentation
  *  of the bytes of a non-empty sequence of objects. The object sequence is bounded by brackets .</li>
  *  <li><em>Flipped</em> Symbol <code>:</code>. A pair of adjacent objects separated by a colon
- *  and by the rules of our grammer, transposed in position.</li>
+ *  and by the rules of our grammar, transposed in position.</li>
  *  <li><em>Hashed</em>. Symbols <code>(</code> <code>)</code>. An object whose bytes are the
  *  <em>hash</em> of a concatenated sequence of objects bound by parentheses.</li>
  *  </ol>
- *  Whitespace is the usual neutral delimiter.
+ *  Whitespace is the usual neutral delimiter. In the absence of an explicit operator (i.e. ':'),
+ *  the default binary operation between adjacent objects is concatenation.
  * </p>
  * 
  * @see <a href="https://en.wikipedia.org/wiki/Shunting-yard_algorithm">Shunting-yard algorithm</a>
@@ -59,6 +61,7 @@ public class Parser {
    * stream is read to the end.
    */
   public static Construct parse(Reader reader) throws UncheckedIOException {
+    Objects.requireNonNull(reader, "null reader");
     try{
       return new Parser().parseImpl(reader);
     } catch (IOException iox) {

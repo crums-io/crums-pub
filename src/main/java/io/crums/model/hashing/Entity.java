@@ -6,6 +6,8 @@ package io.crums.model.hashing;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import io.crums.util.IntegralStrings;
+
 /**
  * Every object in our model is an entity.
  */
@@ -20,7 +22,6 @@ public interface Entity {
   boolean delimited();
   
   
-  
   /**
    * Returns the entity's state as a string of bytes.
    * Depending on the entity type, this may involve a computation.
@@ -33,6 +34,14 @@ public interface Entity {
    * Returns a parseable representation of the entity.
    */
   CharSequence toText();
+  
+  
+  /**
+   * Returns {@linkplain #bytes()} as a hexadecimal string.
+   */
+  default String bytesHex() {
+    return IntegralStrings.toHex(bytes());
+  }
   
   
   /**
