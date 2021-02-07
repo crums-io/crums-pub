@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"io.crums.client"},{"l":"io.crums.client.repo"},{"l":"io.crums.model"},{"l":"io.crums.model.hashing"},{"l":"io.crums.model.json"},{"l":"io.crums.util.mrkl"}];updateSearchResults();
