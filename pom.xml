@@ -4,7 +4,7 @@
   
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.1</version>
   
   <name>Crums Core</name>
   <url>https://crums.io</url>
@@ -130,13 +130,13 @@
     <dependency>
       <groupId>io.crums</groupId>
       <artifactId>merkle-tree</artifactId>
-      <version>0.0.2-SNAPSHOT</version>
+      <version>0.0.2</version>
     </dependency>
     
     <dependency>
       <groupId>io.crums</groupId>
       <artifactId>io-util</artifactId>
-      <version>0.0.5-SNAPSHOT</version>
+      <version>0.0.5</version>
     </dependency>
     
     <dependency>
@@ -152,7 +152,7 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.12</version>
+      <version>[4.13.1,)</version>
       <scope>test</scope>
     </dependency>
     
