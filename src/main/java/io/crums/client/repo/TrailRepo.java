@@ -176,12 +176,45 @@ public class TrailRepo implements Closeable {
   private final static int MAX_SANITY_READ_BYTES = 256 * 1024;
   
   
-  
+  /**
+   * Returns the number of crumtrails in this repo.
+   */
   public long size() {
     try {
       return idx.getRowCount();
     } catch (IOException iox) {
       throw new UncheckedIOException(iox);
+    }
+  }
+  
+  
+  /**
+   * Trims the size of the repo. This is a destructive operation.
+   * 
+   * @param newSize &ge; 0 and &le; {@linkplain #size()}
+   */
+  public void trimSize(long newSize) {
+    try {
+      long size = idx.getRowCount();
+      if (newSize == size)
+        return;
+      if (newSize > size)
+        throw new IllegalArgumentException("newSize " + newSize + " > size() " + size);
+      if (newSize < 0)
+        throw new IllegalArgumentException("newSize "  + newSize);
+
+
+      long terminalOffset =  blobOffset(newSize);
+      
+      idx.truncate(newSize);
+      
+      // logically, we're done already:
+      // if the next line were commented out, the blobs
+      // would simply be overwritten. But we wanna be nice..
+      blobs.truncate(terminalOffset);
+      
+    } catch (IOException iox) {
+      throw new UncheckedIOException("on trimSize(" + newSize + ")", iox);
     }
   }
   
