@@ -243,7 +243,32 @@ public class CrumTrail extends Proof implements Serial {
     return ProofStatement.createItemStatement(this, merkleItem);
   }
   
+  
+
+  private final static int REF_UTC_BUFFER = 14 * 15_000;
+  private final static int REF_URL_COUNT = 4;
+  
+  
+  
+  public String getRefUrl() {
+    return
+        "https://crums.io" + Constants.LIST_ROOTS_PATH + "?" + QS_UTC_NAME + "=" +
+        (crum.utc() + REF_UTC_BUFFER) + "&" + QS_COUNT_NAME + "=-" + REF_URL_COUNT;
+        
+  }
+  
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
