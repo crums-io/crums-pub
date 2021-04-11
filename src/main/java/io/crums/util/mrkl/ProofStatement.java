@@ -26,11 +26,11 @@ import io.crums.util.mrkl.index.TreeIndex;
  * <p>
  * The general structure of returned statements is as follows.
  * <ol>
- * <li><em>LHS</em>. Expresses a path of hash pointers from the proof-item, to the root of the
+ * <li><em>LHS</em>. A hex literal equal to the value of the root node in the Merkle tree.
+ *     (A proof redundantly contains the root value of the tree.)</li>
+ * <li><em>RHS</em>. Expresses a path of hash pointers from the proof-item, to the root of the
  *     Merkle tree. The proof-item may be used as is, or may be substituted with an expression
  *     that evaluates to the proof-item (typically the hash of another byte string).</li>
- * <li><em>RHS</em>. A hex literal equal to the value of the root node in the Merkle tree.
- *     (A proof redundantly contains the root value of the tree.)</li>
  * </ol>
  * </p><p>
  * This way, the <em>intent</em> of such a statement is more transparent to a human reader;
@@ -142,9 +142,10 @@ public class ProofStatement {
             " elements; actual given is " + chain.size());
 
       
-      expr.append(' ').append(EQU).append(' ').append(toHex(proof.rootHash()));
+//      expr.append(' ').append(EQU).append(' ').append(toHex(proof.rootHash()));
       
-      return Statement.parse(expr.toString());
+      // Group all values of interest to a human at the start of the expresssion
+      return Statement.parse(toHex(proof.rootHash()) + " " + EQU + " " + expr);
     
     } catch (IndexOutOfBoundsException chainTooShort) {
       throw new IllegalArgumentException(
