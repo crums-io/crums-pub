@@ -3,6 +3,7 @@
  */
 package io.crums.client;
 
+
 import io.crums.model.CrumsException;
 
 /**
