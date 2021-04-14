@@ -3,6 +3,8 @@
  */
 package io.crums.model;
 
+import java.nio.ByteBuffer;
+
 /**
  * <p>A record of the life of a witnessed hash. A witnessed hash goes through 3 phases, 2 of which are
  * represented by instances of this class.
@@ -75,5 +77,69 @@ public abstract class CrumRecord {
   public final int hashCode() {
     return crum().hashCode();
   }
+  
+
+  /**
+   * Returns the time witnessed.
+   * 
+   * @return {@code crum().utc()}
+   */
+  public final long utc() {
+    return crum().utc();
+  }
+  
+  
+  /**
+   * Returns the hash witnessed.
+   * 
+   * @return {@code crum().hash()}
+   */
+  public final ByteBuffer hash() {
+    return crum().hash();
+  }
+  
+
+  /**
+   * Returns the {@linkplain #hash() hash} in hexadecimal representation.
+   */
+  public final String hashHex() {
+    return crum().hashHex();
+  }
+  
+  // Posting this as the top of a thread to a deleted idea. Other files are going:
+  // corner cases were making this idea too complicated.
+  
+  // TODO: remove this comment in next commit
+//  
+//  /**
+//   * If the subclass supports it, returns the time the record was retrieved from the server; otherwise,
+//   * the returned value defaults to {@linkplain #utc()}. The return value figures in {@linkplain
+//   * #alreadyWitnessed()}. Note this
+//   * 
+//   * @return {@code utc()} (default implementation)
+//   */
+//  public long attemptTime() {
+//    return utc();
+//  }
+//  
+//  
+//  /**
+//   * Determines if the {@linkplain #hash() hash} was already witnessed.
+//   * 
+//   * @return {@code isTrailed() || attemptTime() < utc()}
+//   */
+//  public final boolean alreadyWitnessed() {
+//    return isTrailed() || attemptTime() < utc();
+//  }
 
 }
+
+
+
+
+
+
+
+
+
+

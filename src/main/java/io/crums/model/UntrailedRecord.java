@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * A <tt>CrumRecord </tt> in the "untrailed" state.
  */
-public final class UntrailedRecord extends CrumRecord {
+public class UntrailedRecord extends CrumRecord {
 
   private final Crum crum;
   
@@ -18,18 +18,26 @@ public final class UntrailedRecord extends CrumRecord {
   public UntrailedRecord(Crum crum) {
     this.crum = Objects.requireNonNull(crum, "null crum");
   }
+  
+  
+  /**
+   * Copy constructor.
+   */
+  protected UntrailedRecord(UntrailedRecord copy) {
+    this.crum = Objects.requireNonNull(copy, "null copy instance").crum();
+  }
 
   /**
    * @return <tt>false</tt>
    */
   @Override
-  public boolean isTrailed() {
+  public final boolean isTrailed() {
     return false;
   }
 
   
   @Override
-  public Crum crum() {
+  public final Crum crum() {
     return crum;
   }
 
@@ -37,7 +45,7 @@ public final class UntrailedRecord extends CrumRecord {
    * @return <tt>null</tt>
    */
   @Override
-  public CrumTrail trail() {
+  public final CrumTrail trail() {
     return null;
   }
 
