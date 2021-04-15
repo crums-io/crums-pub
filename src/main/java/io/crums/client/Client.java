@@ -15,7 +15,6 @@ import java.nio.ByteBuffer;
 import java.net.http.HttpClient.Version;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -25,6 +24,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import io.crums.util.IntegralStrings;
+import io.crums.util.Lists;
 import io.crums.util.main.Args;
 import io.crums.util.main.TablePrint;
 import io.crums.model.Constants;
@@ -34,7 +34,51 @@ import io.crums.model.json.CrumTrailParser;
 import io.crums.model.json.TreeRefParser;
 
 /**
+ * The crums REST client.
  * 
+ * <h1>Usage</h1>
+ * <p>
+ * This following does not require setup:
+ * <ul>
+ * <li>{@linkplain #getBeacon()}</li>
+ * </ul>
+ * </p><p>
+ * More typically there are hashes to be witnessed, their crumtrails to be retrieved.
+ * This a 2 step process. First the hashes are gathered. To set a <em>single hash</em> invoke
+ * one of the following:
+ * <ul>
+ * <li>{@linkplain #setHash(byte[])}</li>
+ * <li>{@linkplain #setHash(ByteBuffer)}</li>
+ * <li>{@linkplain #setHash(String)}</li>
+ * </ul>
+ * </p><p>
+ * To set <em>multiple</em> hashes invoke any of
+ * <ul>
+ * <li>{@linkplain #addHash(byte[])}</li>
+ * <li>{@linkplain #addHash(ByteBuffer)}</li>
+ * <li>{@linkplain #addHash(String)}</li>
+ * </ul>
+ * for each hash.
+ * </p><p>
+ * There are 2 choices for retrieving {@linkplain CrumRecord}s for the hashes:
+ * <ul>
+ * <li>{@linkplain #getCrumRecordsAsJson()}</li>
+ * <li>{@linkplain #getCrumRecords()}</li>
+ * </ul>
+ * Note the above 2 methods do not clear the instance's hashes. To do that
+ * <ul>
+ * <li>{@linkplain #clearHashes()}</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Also note that methods like this that change instance state (i.e. methods with side effects)
+ * return the instance itself for invocation chaining.
+ * </p>
+ * <h2>Not Thread-safe</h2>
+ * <p><i>Instances are not thread-safe</i>. To access the server from multiple threads, use one instance per thread.</p>
+ * <p>
+ * TODO: add list tree-refs
+ * </p>
  */
 public class Client {
   
@@ -52,14 +96,16 @@ public class Client {
    * @return the hash
    */
   public String getHash() {
-    if (hashes.size() != 1)
+    if (hashes.size() > 1)
       throw new IllegalStateException(
           hashes.isEmpty() ? "hash not set" : "ambiguous: " + hashes);
-    return hashes.get(0);
+    return hashes.isEmpty() ? null : hashes.get(0);
   }
 
   /**
-   * @param hash the hash to set (in hex)
+   * Sets the query hash to the given single value.
+   * 
+   * @param hash 64-char hex
    */
   public Client setHash(String hash) {
     hash = hash.trim().toLowerCase();
@@ -71,7 +117,9 @@ public class Client {
   }
 
   /**
+   * Sets the query hash to the given single value.
    * 
+   * @param hash 32 bytes
    */
   public Client setHash(byte[] hash) {
     checkHashWidth(hash.length);
@@ -81,8 +129,11 @@ public class Client {
     return this;
   }
 
+
   /**
+   * Sets the query hash to the given single value.
    * 
+   * @param hash 32 bytes
    */
   public Client setHash(ByteBuffer hash) {
     checkHashWidth(hash.remaining());
@@ -92,8 +143,11 @@ public class Client {
     return this;
   }
 
+
   /**
-   * @param hash the hash to set (in hex)
+   * Adds the given hash to the query.
+   * 
+   * @param hash 64-char hex
    */
   public Client addHash(String hash) {
     hash = hash.trim().toLowerCase();
@@ -103,8 +157,11 @@ public class Client {
     return this;
   }
 
+
   /**
+   * Adds the given hash to the query.
    * 
+   * @param hash 32 bytes
    */
   public Client addHash(byte[] hash) {
     checkHashWidth(hash.length);
@@ -113,8 +170,11 @@ public class Client {
     return this;
   }
 
+
   /**
+   * Adds the given hash to the query.
    * 
+   * @param hash 32 bytes
    */
   public Client addHash(ByteBuffer hash) {
     checkHashWidth(hash.remaining());
@@ -124,15 +184,22 @@ public class Client {
   }
   
   
-  
+  /**
+   * Clears the hashes set or added.
+   */
   public Client clearHashes() {
     hashes.clear();
     return this;
   }
   
 
+  /**
+   * Returns the added or set hashes.
+   * 
+   * @return an immutable snapshot of the added hashes
+   */
   public List<String> getHashes() {
-    return Collections.unmodifiableList(new ArrayList<>(hashes));
+    return Lists.readOnlyCopy(hashes);
   }
   
   
@@ -152,7 +219,7 @@ public class Client {
   
   
   /**
-   * Returns the {@linkplain CrumRecord}s for the 
+   * Returns the {@linkplain CrumRecord}s for the added {@linkplain #getHashes() hashes}.
    * 
    * @return non-empty, immutable list of records
    */
@@ -219,7 +286,10 @@ public class Client {
   
   
   
-  
+  /**
+   * Returns a hash reference to the latest published tree at the server. Because its hash
+   * value cannot be computed in advance, its value acts as a beacon.
+   */
   public TreeRef getBeacon() throws ClientException {
     
     HttpRequest request = HttpRequest.newBuilder()

@@ -105,32 +105,6 @@ public abstract class CrumRecord {
   public final String hashHex() {
     return crum().hashHex();
   }
-  
-  // Posting this as the top of a thread to a deleted idea. Other files are going:
-  // corner cases were making this idea too complicated.
-  
-  // TODO: remove this comment in next commit
-//  
-//  /**
-//   * If the subclass supports it, returns the time the record was retrieved from the server; otherwise,
-//   * the returned value defaults to {@linkplain #utc()}. The return value figures in {@linkplain
-//   * #alreadyWitnessed()}. Note this
-//   * 
-//   * @return {@code utc()} (default implementation)
-//   */
-//  public long attemptTime() {
-//    return utc();
-//  }
-//  
-//  
-//  /**
-//   * Determines if the {@linkplain #hash() hash} was already witnessed.
-//   * 
-//   * @return {@code isTrailed() || attemptTime() < utc()}
-//   */
-//  public final boolean alreadyWitnessed() {
-//    return isTrailed() || attemptTime() < utc();
-//  }
 
 }
 
