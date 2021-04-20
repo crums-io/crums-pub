@@ -33,13 +33,16 @@ public abstract class CrumsException extends RuntimeException {
    * which you can invoke this way with a clearer stack trace.
    * <p><pre>
    * 
-   *  try {
-   *    // .. do some work
-   *    ..
-   *  } catch (CrumsException cx) {
-   *    throw buildException(cx).fillInStackTrace();
-   *  }
+   *  CrumsException buildException(Exception e) { .. }
    * 
+   *  void myMethod() {
+   *    try {
+   *      // .. do some work
+   *      ..
+   *    } catch (Exception cx) {
+   *      throw buildException(x).fillInStackTrace();
+   *    }
+   *  }
    * </pre></p>
    */
   @Override
