@@ -4,7 +4,7 @@
   
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
-  <version>0.0.2</version>
+  <version>0.0.3-SNAPSHOT</version>
   
   <name>Crums Core</name>
   <url>https://crums.io</url>
@@ -136,7 +136,7 @@
     <dependency>
       <groupId>io.crums</groupId>
       <artifactId>io-util</artifactId>
-      <version>0.0.6</version>
+      <version>0.0.7-SNAPSHOT</version>
     </dependency>
     
     <dependency>
