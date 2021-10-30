@@ -223,7 +223,7 @@ public class Client {
    * 
    * @return non-empty, immutable list of records
    */
-  public List<CrumRecord> getCrumRecords() {
+  public List<CrumRecord> getCrumRecords() throws ClientException {
     return CrumTrailParser.INSTANCE.toCrumRecords( getCrumRecordsAsJson() );
   }
   
