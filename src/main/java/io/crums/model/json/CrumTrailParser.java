@@ -7,10 +7,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import io.crums.util.json.simple.JSONArray;
+import io.crums.util.json.simple.JSONObject;
+import io.crums.util.json.simple.parser.JSONParser;
+import io.crums.util.json.simple.parser.ParseException;
 
 import io.crums.model.Crum;
 import io.crums.model.CrumRecord;

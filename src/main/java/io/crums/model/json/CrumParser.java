@@ -4,9 +4,9 @@
 package io.crums.model.json;
 
 
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import io.crums.util.json.simple.JSONObject;
+import io.crums.util.json.simple.parser.JSONParser;
+import io.crums.util.json.simple.parser.ParseException;
 
 import io.crums.model.Crum;
 import io.crums.util.IntegralStrings;

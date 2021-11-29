@@ -7,7 +7,7 @@ package io.crums.model.json;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-import org.json.simple.JSONObject;
+import io.crums.util.json.simple.JSONObject;
 
 import io.crums.model.TreeRef;
 import io.crums.model.Constants;

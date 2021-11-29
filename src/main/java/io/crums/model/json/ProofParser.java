@@ -3,10 +3,10 @@
  */
 package io.crums.model.json;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import io.crums.util.json.simple.JSONArray;
+import io.crums.util.json.simple.JSONObject;
+import io.crums.util.json.simple.parser.JSONParser;
+import io.crums.util.json.simple.parser.ParseException;
 
 import io.crums.model.Constants;
 import io.crums.util.IntegralStrings;
