@@ -4,7 +4,7 @@
   
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
-  <version>0.0.4</version>
+  <version>1.0.0-SNAPSHOT</version>
   
   <name>Crums Core</name>
   <url>https://crums.io</url>
@@ -16,6 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.11</maven.compiler.source>
     <maven.compiler.target>1.11</maven.compiler.target>
+    <crums.util>1.0.0-SNAPSHOT</crums.util>
   </properties>
   
   
@@ -133,17 +134,18 @@
       <version>0.0.2</version>
     </dependency>
     
+    
     <dependency>
       <groupId>io.crums</groupId>
-      <artifactId>io-util</artifactId>
-      <version>[0.0.8,)</version>
+      <artifactId>table-io</artifactId>
+      <version>${crums.util}</version>
     </dependency>
     
-    <!-- dependency>
-      <groupId>com.googlecode.json-simple</groupId>
-      <artifactId>json-simple</artifactId>
-      <version>1.1.1</version>
-    </dependency -->
+    <dependency>
+      <groupId>io.crums</groupId>
+      <artifactId>jsonimple</artifactId>
+      <version>${crums.util}</version>
+    </dependency>
     
   
     <!-- Test scope follows -->

@@ -80,7 +80,7 @@ public class TrailRepo implements Closeable {
     Objects.requireNonNull(opening, "null opening");
     
     
-    try (TaskStack onFail = new TaskStack(this)) {
+    try (TaskStack onFail = new TaskStack()) {
       
       this.idx = Table.newSansKeystoneInstance(
           opening.openChannel(new File(dir, IDX_FILE)),
@@ -266,7 +266,7 @@ public class TrailRepo implements Closeable {
 
   @Override
   public void close() {
-    TaskStack closer = new TaskStack(this);
+    TaskStack closer = new TaskStack();
     closer.pushClose(blobs);
     closer.pushClose(idx);
     closer.close();
