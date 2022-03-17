@@ -4,12 +4,12 @@
 package io.crums.model.json;
 
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.security.MessageDigest;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.crums.model.Constants;
 import io.crums.util.mrkl.Builder;

@@ -1,19 +1,22 @@
 /*
  * Copyright 2021 Babak Farhang
  */
-package io.crums.util.mrkl;
+package io.crums.util.mrkl.hashing;
 
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.gnahraf.test.SelfAwareTestCase;
 
 import io.crums.model.hashing.Statement;
 import io.crums.util.hash.Digests;
+import io.crums.util.mrkl.FixedLeafBuilder;
+import io.crums.util.mrkl.Proof;
+import io.crums.util.mrkl.Tree;
 
 /**
  * 
@@ -112,7 +115,7 @@ public class ProofStatementTest extends SelfAwareTestCase {
   
   
   public static Tree newRandomTree(int leafCount) {
-    Builder builder = new FixedLeafBuilder(Digests.SHA_256.hashAlgo());
+    var builder = new FixedLeafBuilder(Digests.SHA_256.hashAlgo());
     Random random = new Random(leafCount);
     byte[] leafEntry = new byte[Digests.SHA_256.hashWidth()];
     for (int index = 0; index < leafCount; ++index) {

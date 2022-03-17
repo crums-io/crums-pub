@@ -14,15 +14,17 @@
   
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.11</maven.compiler.source>
-    <maven.compiler.target>1.11</maven.compiler.target>
+    <maven.compiler.release>17</maven.compiler.release>
     <crums.util>1.0.0-SNAPSHOT</crums.util>
+    <crums.mrkl>1.0.0-SNAPSHOT</crums.mrkl>
+    <crums.jsonimple>1.0.0-SNAPSHOT</crums.jsonimple>
   </properties>
   
   
   
   <build>
     <plugins>
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>appassembler-maven-plugin</artifactId>
@@ -42,7 +44,15 @@
           </programs>
         </configuration>
       </plugin>
+
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.1</version>
+      </plugin>
       
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -56,68 +66,6 @@
           </execution>
         </executions>
       </plugin>
-
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>versions-maven-plugin</artifactId>
-        <version>2.5</version>
-        <configuration>
-          <generateBackupPoms>false</generateBackupPoms>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0-M3</version>
-        <executions>
-          <execution>
-            <id>enforce-maven</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireMavenVersion>
-                  <version>[3.0,)</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
-        <configuration>
-          <release>11</release>
-        </configuration>
-      </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.0</version>
-        <configuration>
-          <argLine>
-            --illegal-access=permit
-          </argLine>
-        </configuration>
-      </plugin>
-      
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <version>2.22.0</version>
-        <configuration>
-          <argLine>
-            --illegal-access=permit
-          </argLine>
-        </configuration>
-      </plugin>
-      
       
     </plugins>
   </build>
@@ -131,7 +79,7 @@
     <dependency>
       <groupId>io.crums</groupId>
       <artifactId>merkle-tree</artifactId>
-      <version>0.0.2</version>
+      <version>${crums.mrkl}</version>
     </dependency>
     
     
@@ -144,17 +92,17 @@
     <dependency>
       <groupId>io.crums</groupId>
       <artifactId>jsonimple</artifactId>
-      <version>${crums.util}</version>
+      <version>${crums.jsonimple}</version>
     </dependency>
     
   
     <!-- Test scope follows -->
     
-  
+
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>[4.13.1,)</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.8.2</version>
       <scope>test</scope>
     </dependency>
     

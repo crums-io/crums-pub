@@ -5,7 +5,7 @@ package io.crums.model.hashing;
 
 
 import static io.crums.util.IntegralStrings.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -15,7 +15,7 @@ import com.gnahraf.test.SelfAwareTestCase;
 import io.crums.util.hash.Digest;
 import io.crums.util.hash.Digests;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * 

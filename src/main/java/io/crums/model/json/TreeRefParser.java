@@ -25,7 +25,6 @@ public class TreeRefParser {
   
 
 
-  @SuppressWarnings("unchecked")
   public JSONObject toJsonObject(TreeRef ref) {
     JSONObject jtree = new JSONObject();
     jtree.put(Constants.RSP_HASH_JSON, ref.hashHex());

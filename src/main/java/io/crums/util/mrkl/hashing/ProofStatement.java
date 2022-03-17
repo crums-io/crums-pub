@@ -1,7 +1,7 @@
 /*
  * Copyright 2021 Babak Farhang
  */
-package io.crums.util.mrkl;
+package io.crums.util.mrkl.hashing;
 
 
 import static io.crums.model.hashing.ExpressionSymbols.*;
@@ -15,6 +15,8 @@ import io.crums.model.hashing.Parser;
 //import io.crums.model.hashing.Entity;
 import io.crums.model.hashing.Statement;
 import io.crums.util.hash.Digests;
+import io.crums.util.mrkl.Proof;
+import io.crums.util.mrkl.Tree;
 import io.crums.util.mrkl.index.AbstractNode;
 import io.crums.util.mrkl.index.TreeIndex;
 

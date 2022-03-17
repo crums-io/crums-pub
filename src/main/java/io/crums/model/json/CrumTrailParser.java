@@ -11,7 +11,7 @@ import io.crums.util.json.simple.JSONArray;
 import io.crums.util.json.simple.JSONObject;
 import io.crums.util.json.simple.parser.JSONParser;
 import io.crums.util.json.simple.parser.ParseException;
-
+import io.crums.util.mrkl.Proof;
 import io.crums.model.Crum;
 import io.crums.model.CrumRecord;
 import io.crums.model.CrumTrail;
@@ -19,7 +19,6 @@ import io.crums.model.TrailedRecord;
 import io.crums.model.UntrailedRecord;
 import io.crums.model.Constants;
 import io.crums.util.Lists;
-import io.crums.util.mrkl.Proof;
 
 /**
  * JSON crum trail parser.
@@ -62,7 +61,6 @@ public class CrumTrailParser {
   
   
 
-  @SuppressWarnings("unchecked")
   public JSONObject toJsonObject(CrumTrail trail) {
     
     JSONObject jtrail = new JSONObject();

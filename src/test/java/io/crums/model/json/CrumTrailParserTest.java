@@ -5,20 +5,20 @@ package io.crums.model.json;
 
 
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.crums.model.Crum;
 import io.crums.model.CrumTrail;
-import io.crums.model.Constants;
 import io.crums.util.mrkl.Builder;
 import io.crums.util.mrkl.Proof;
 import io.crums.util.mrkl.Tree;
+import io.crums.model.Constants;
 
 /**
  * 

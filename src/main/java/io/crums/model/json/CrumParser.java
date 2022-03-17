@@ -27,7 +27,6 @@ public class CrumParser {
   
   
   
-  @SuppressWarnings("unchecked")
   public JSONObject toJsonObject(Crum crum) {
     
     JSONObject jcrum = new JSONObject();

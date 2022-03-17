@@ -4,11 +4,11 @@
 package io.crums.model.json;
 
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Random;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.crums.model.Crum;
 import io.crums.model.Constants;

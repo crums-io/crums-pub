@@ -22,7 +22,7 @@ import io.crums.model.hashing.ExpressionSymbols;
 import io.crums.model.hashing.Statement;
 import io.crums.util.IntegralStrings;
 import io.crums.util.mrkl.Proof;
-import io.crums.util.mrkl.ProofStatement;
+import io.crums.util.mrkl.hashing.ProofStatement;
 import io.crums.util.mrkl.Tree;
 
 /**

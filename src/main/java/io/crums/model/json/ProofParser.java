@@ -7,10 +7,9 @@ import io.crums.util.json.simple.JSONArray;
 import io.crums.util.json.simple.JSONObject;
 import io.crums.util.json.simple.parser.JSONParser;
 import io.crums.util.json.simple.parser.ParseException;
-
+import io.crums.util.mrkl.Proof;
 import io.crums.model.Constants;
 import io.crums.util.IntegralStrings;
-import io.crums.util.mrkl.Proof;
 
 /**
  * JSON Merkle proof parser.
@@ -29,7 +28,6 @@ public class ProofParser {
   public final static String CHAIN = "chain";
   
   
-  @SuppressWarnings("unchecked")
   public JSONObject toJsonObject(Proof proof) {
     
     JSONObject jproof = new JSONObject();
