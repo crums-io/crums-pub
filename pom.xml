@@ -6,19 +6,67 @@
   <artifactId>crums-core</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   
-  <name>Crums Core</name>
-  <url>https://crums.io</url>
+  
+  <properties>
+    <revision>1.0.0-SNAPSHOT</revision>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+    <crums.util>1.0.0</crums.util>
+    <crums.mrkl>1.0.0</crums.mrkl>
+    <crums.jsonimple>1.0.0</crums.jsonimple>
+  </properties>
+  
+  <name>${project.groupId}::${project.artifactId}</name>
+  <url>https://crums.io/project/crums-core</url>
   
   <description>Crums data model, parsers (JSON) and utilities</description>
   
   
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>17</maven.compiler.release>
-    <crums.util>1.0.0-SNAPSHOT</crums.util>
-    <crums.mrkl>1.0.0-SNAPSHOT</crums.mrkl>
-    <crums.jsonimple>1.0.0-SNAPSHOT</crums.jsonimple>
-  </properties>
+  
+  
+  
+  <licenses>
+    <license>
+      <name>GNU Lesser General Public License, Version 3</name>
+      <url>https://www.gnu.org/licenses/lgpl-3.0.txt</url>
+    </license>
+  </licenses>
+  
+  <developers>
+    <developer>
+      <name>Babak Farhang</name>
+      <email>babak@crums.io</email>
+      <organization>Crums</organization>
+      <organizationUrl>https://crums.io</organizationUrl>
+    </developer>
+  </developers>
+  
+  <scm>
+    <connection>scm:git:git://github.com/crums-io/crums-pub.git</connection>
+    <developerConnection>scm:git:ssh://github.com:crums-io/crums-pub.git</developerConnection>
+    <url>http://github.com/crums-io/crums-pub/tree/master</url>
+  </scm>
+  
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    
+    <repository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+    
+  </distributionManagement>
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
@@ -66,6 +114,84 @@
           </execution>
         </executions>
       </plugin>
+      
+      
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>3.4.1</version>
+          <configuration>
+            <!--
+            Note the following is necessary only if _other_ javadoc errors are present,
+            i.e. unnecessary:
+            
+            <sourceFileExcludes>module-info.java</sourceFileExcludes>
+            
+            -->
+            <!--
+            Following are defaults:
+            
+            <quiet>false</quiet> (not exactly "quiet" when set to true)
+            <failOnWarnings>false</failOnWarnings>
+            <failOnError>true</failOnError>
+            
+            -->
+            
+            <bottom>
+              <![CDATA[
+              <table width="100%">
+              <tr>
+              <td style="text-align: left;">&nbsp;io.crums::]]>${project.artifactId} v${revision}
+              <![CDATA[ <br/>
+              &nbsp;Licensed under the GNU Lesser General Public License v3
+              (<a href="https://www.gnu.org/licenses/lgpl-3.0.txt">LGPL</a>)
+              </td>
+              <td style="text-align: right;"><br/>&copy; 2020-2022 <a href="http://crums.io">crums.io</a> All Rights Reserved.&nbsp;&nbsp;</td>
+              </tr>
+              </table>
+              ]]>
+            </bottom>
+            
+          </configuration>
+          
+          <executions>
+            <execution>
+              <id>attach-javadocs</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+              </execution>
+          </executions>
+        </plugin>
+        
+        <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>nexus-staging-maven-plugin</artifactId>
+          <version>1.6.13</version>
+          <extensions>true</extensions>
+          <configuration>
+            <serverId>ossrh</serverId>
+            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+          </configuration>
+        </plugin>
+        
+        
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>1.5</version>
+          <executions>
+            <execution>
+              <id>sign-artifacts</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>sign</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      
       
     </plugins>
   </build>

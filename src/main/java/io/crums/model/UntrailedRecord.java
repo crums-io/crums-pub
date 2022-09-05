@@ -6,14 +6,14 @@ package io.crums.model;
 import java.util.Objects;
 
 /**
- * A <tt>CrumRecord </tt> in the "untrailed" state.
+ * A <code>CrumRecord </code> in the "untrailed" state.
  */
 public class UntrailedRecord extends CrumRecord {
 
   private final Crum crum;
   
   /**
-   * Creates an instance using the given <tt>crum</tt>.
+   * Creates an instance using the given <code>crum</code>.
    */
   public UntrailedRecord(Crum crum) {
     this.crum = Objects.requireNonNull(crum, "null crum");
@@ -28,7 +28,7 @@ public class UntrailedRecord extends CrumRecord {
   }
 
   /**
-   * @return <tt>false</tt>
+   * @return <code>false</code>
    */
   @Override
   public final boolean isTrailed() {
@@ -42,7 +42,7 @@ public class UntrailedRecord extends CrumRecord {
   }
 
   /**
-   * @return <tt>null</tt>
+   * @return <code>null</code>
    */
   @Override
   public final CrumTrail trail() {

@@ -12,7 +12,7 @@ import java.util.Objects;
 
 
 /**
- * The <tt>xxx : xxx</tt> entity defined by the result of a flip (transposition).
+ * The <code>xxx : xxx</code> entity defined by the result of a flip (transposition).
  */
 final class Flip extends BaseEntity {
   

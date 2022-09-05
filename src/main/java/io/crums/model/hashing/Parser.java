@@ -25,9 +25,10 @@ import io.crums.util.Lists;
  * Base parser for the grammar. This is a super-simple grammar, so we do away with a
  * formal specification.
  * 
- * <h3>Grammer</h3>
+ * <h2>Grammer</h2>
  * <p>
  *  Each object represents a final sequence of bytes. There are 4 types object:
+ * </p>
  *  <ol>
  *  <li><em>Literal</em>. An even sequence of hexadecimal digits, each pair specifying a byte
  *  value.</li>
@@ -39,6 +40,7 @@ import io.crums.util.Lists;
  *  <li><em>Hashed</em>. Symbols <code>(</code> <code>)</code>. An object whose bytes are the
  *  <em>hash</em> of a concatenated sequence of objects bound by parentheses.</li>
  *  </ol>
+ * <p>
  *  Whitespace is the usual neutral delimiter. In the absence of an explicit operator (i.e. ':'),
  *  the default binary operation between adjacent objects is concatenation.
  * </p>

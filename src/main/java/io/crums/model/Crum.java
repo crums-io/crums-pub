@@ -10,7 +10,7 @@ import java.nio.ByteBuffer;
 /**
  * A timestamp, witness to a hash. Instances are immutable. This is a 2-tuple: a hash, and a UTC time.
  * 
- * <h3>Version 1 Note</h3>
+ * <h2>Historical Note</h2>
  * <p>
  * This used to be a 3-tuple in version 0. The third field was a rather beefy 256-byte signature derived
  * from the other 2 fields. The signature was meant to bridge the gap in time from when a hash is first witnessed
@@ -20,8 +20,6 @@ import java.nio.ByteBuffer;
  * and complexity it introduces, so the signature was altogether dropped. A signatured version can be layered on top,
  * if the need/usecase arises.
  * </p>
- * 
- * @see #compareTo(Crum) Notable Version 1 changes in Crum ordering
  */
 public class Crum extends HashUtc implements Comparable<Crum> {
   
@@ -35,14 +33,33 @@ public class Crum extends HashUtc implements Comparable<Crum> {
   
 
 
+  /**
+   * Creates a new instance from its serial form.
+   * 
+   * @param data the serial form. Not copied; <em>do not modify!</em>
+   * 
+   * @see HashUtc#serialForm()
+   */
   public Crum(ByteBuffer data) {
     super(data);
   }
 
+  /**
+   * Creates a new instance using the given hash and time.
+   * 
+   * @param hash  of length 32; defensively copied
+   * @param utc   UTC time
+   */
   public Crum(byte[] hash, long utc) {
     super(hash, utc);
   }
 
+  /**
+   * Creates a new instance using the given hash and time.
+   * 
+   * @param hash  with 32 remaining bytes; defensively copied
+   * @param utc   UTC time
+   */
   public Crum(ByteBuffer hash, long utc) {
     super(hash, utc);
   }

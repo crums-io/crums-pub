@@ -104,7 +104,7 @@ public class CrumTrailParser {
   
   
   /**
-   * Returns the optionally trailed <tt>CrumRecord</tt>.
+   * Returns the optionally trailed <code>CrumRecord</code>.
    * 
    * @param jtrail
    * @return

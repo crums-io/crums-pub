@@ -7,21 +7,21 @@ package io.crums.model;
 import java.util.Objects;
 
 /**
- * A "trailed" <tt>CrumRecord</tt>.
+ * A "trailed" <code>CrumRecord</code>.
  */
 public final class TrailedRecord extends CrumRecord {
   
   private final CrumTrail trail;
 
   /**
-   * Creates an instance with the given crum <tt>trail</tt>.
+   * Creates an instance with the given crum <code>trail</code>.
    */
   public TrailedRecord(CrumTrail trail) {
     this.trail = Objects.requireNonNull(trail, "null trail");
   }
 
   /**
-   * @return <tt>true</tt>
+   * @return <code>true</code>
    */
   @Override
   public boolean isTrailed() {
@@ -34,7 +34,7 @@ public final class TrailedRecord extends CrumRecord {
   }
 
   /**
-   * @return non-<tt>null</tt>
+   * @return non-<code>null</code>
    */
   @Override
   public CrumTrail trail() {

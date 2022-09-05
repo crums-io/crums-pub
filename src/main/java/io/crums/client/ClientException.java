@@ -7,7 +7,7 @@ package io.crums.client;
 import io.crums.model.CrumsException;
 
 /**
- * Client-side <tt>CrumsException</tt>. Typically wraps (caused by) a lower level exception
+ * Client-side <code>CrumsException</code>. Typically wraps (caused by) a lower level exception
  * such as from I/O, parsing, etc.
  */
 @SuppressWarnings("serial")

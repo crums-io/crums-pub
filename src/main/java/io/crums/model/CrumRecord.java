@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 /**
  * <p>A record of the life of a witnessed hash. A witnessed hash goes through 3 phases, 2 of which are
  * represented by instances of this class.
- * </p><p>
+ * </p>
  * <ol>
  *   <li><b>Created</b>. A crum, that is just a hash/utc pair, enters the database.</li>
  *   <li><b>Trailed</b>. The crum enters a Merkle tree.</li>
@@ -16,16 +16,16 @@ import java.nio.ByteBuffer;
  *   artifact of the crum remaining in the database is the <em>root</em> of the Merkle tree it was in
  *   (to which a valid instance of this class is forever provably linked to).</li>
  * </ol>
- * </p><p>
+ * <p>
  * An instance of this class represents of the first 2 states of a crum.
  * </p>
  */
 public abstract class CrumRecord {
   
   /**
-   * Determines whether the record has a crum trail. A <tt>CrumRecord</tt> begins life without a trail.
+   * Determines whether the record has a crum trail. A <code>CrumRecord</code> begins life without a trail.
    * 
-   * @return <tt>true</tt> iff {@linkplain #trail()} doesn't return <tt>null</tt>.
+   * @return <code>true</code> iff {@linkplain #trail()} doesn't return <code>null</code>.
    * 
    * @see #trail()
    */
@@ -34,14 +34,14 @@ public abstract class CrumRecord {
   /**
    * Returns the record's crum (hash/utc pair).
    * 
-   * @return never <tt>null</tt>
+   * @return never <code>null</code>
    */
   public abstract Crum crum();
   
   /**
-   * Returns the crum trail, or <tt>null</tt> if it doesn't have one. (A crum has a trail once it's made it into a Merkle tree.)
+   * Returns the crum trail, or <code>null</code> if it doesn't have one. (A crum has a trail once it's made it into a Merkle tree.)
    * 
-   * @return possibly <tt>null</tt>
+   * @return possibly <code>null</code>
    * @see #isTrailed()
    */
   public abstract CrumTrail trail();

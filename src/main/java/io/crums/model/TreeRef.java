@@ -17,14 +17,14 @@ public class TreeRef extends HashUtc implements Comparable<TreeRef> {
 
 
   /**
-   * Writes the specified fields to the given <tt>out</tt> buffer. The buffer's position is advanced by 
+   * Writes the specified fields to the given <code>out</code> buffer. The buffer's position is advanced by 
    * {@linkplain #TREE_REF_SIZE}-many bytes.
    * 
    * @param hash      {@linkplain Constants#HASH_WIDTH} bytes long
    * @param firstUtc  the min utc in the tree
    * @param lastUtc   the max utc in the tree
    * @param out the output buffer
-   * @return <tt>out</tt>
+   * @return <code>out</code>
    */
   public static ByteBuffer writeTreeRefToBuffer(byte[] hash, long firstUtc, long lastUtc, ByteBuffer out) {
     return writeToBuffer(hash, firstUtc, out).putLong(lastUtc);
@@ -32,14 +32,14 @@ public class TreeRef extends HashUtc implements Comparable<TreeRef> {
   
   
   /**
-   * Writes the specified fields to the given <tt>out</tt> buffer. The buffer's position is advanced by 
+   * Writes the specified fields to the given <code>out</code> buffer. The buffer's position is advanced by 
    * {@linkplain #TREE_REF_SIZE}-many bytes.
    * 
    * @param hash      {@linkplain Constants#HASH_WIDTH} remaining bytes
    * @param firstUtc  the min utc in the tree
    * @param lastUtc   the max utc in the tree
    * @param out the output buffer
-   * @return <tt>out</tt>
+   * @return <code>out</code>
    */
   public static ByteBuffer writeTreeRefToBuffer(ByteBuffer hash, long firstUtc, long lastUtc, ByteBuffer out) {
     return writeToBuffer(hash, firstUtc, out).putLong(lastUtc);
@@ -114,10 +114,11 @@ public class TreeRef extends HashUtc implements Comparable<TreeRef> {
 
   /**
    * Returns the instance's serialized representation as a read-only buffer.
+   * Note an instance's serial form does not include the {@linkplain #treeNumber() treeNumber}.
    * 
    * @return a buffer with {@linkplain #DATA_SIZE} remaining bytes.
    * 
-   * @see #TreeRef(ByteBuffer)
+   * @see #TreeRef(ByteBuffer, int)
    */
   @Override
   public ByteBuffer serialForm() {

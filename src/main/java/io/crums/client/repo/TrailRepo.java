@@ -23,7 +23,21 @@ import io.crums.util.Lists;
 import io.crums.util.TaskStack;
 
 /**
- * A local repo for {@linkplain CrumTrail}s.
+ * A local repo for {@linkplain CrumTrail}s. This is a very, very simple design.
+ * The repo cares neither about the order crumtrails, nor does it attempt
+ * to verify the crumtrails are legit. These concerns are delegated to the user.
+ * 
+ * <h2>Meta ID</h2>
+ * <p>
+ * You can specify a <em>meta</em> ID (expressed as a {@code long}) along with
+ * each crumtrail you store. The repo does not know what it means: it does not
+ * validate it any way. However, the application <em>can</em> order these IDs
+ * and then search over them efficiently (even if they don't fit in memory).
+ * </p>
+ * 
+ * @see #putTrail(CrumTrail, long)
+ * @see #getIds()
+ * @see #getTrail(long)
  */
 public class TrailRepo implements Closeable {
   
@@ -72,9 +86,15 @@ public class TrailRepo implements Closeable {
   }
 
   /**
-   * Creates a new instance.
+   * Creates a new instance. Note to access this constructor, you'll need to
+   * separately require the <code>io.crums.util</code> module.
+   * 
+   * @param dir     path to directory
+   * @param opening what to do, expected state; requires <code>io.crums.util</code> module
+   * 
+   * @throws IOException if an error occurs while opening either of the index- or blob files
    */
-  public TrailRepo(File dir, Opening opening) throws IOException {
+  public TrailRepo(File dir, @SuppressWarnings("exports") Opening opening) throws IOException {
     
     this.dir = Objects.requireNonNull(dir, "null dir");
     Objects.requireNonNull(opening, "null opening");
@@ -106,7 +126,14 @@ public class TrailRepo implements Closeable {
   }
   
   
-  
+  /**
+   * Puts the given crumtrail into the repo and returns its index.
+   * 
+   * @param trail the crumtrail
+   * @param id     user-specified ID
+   * 
+   * @return  the trail's index in the repo
+   */
   public long putTrail(CrumTrail trail, long id) {
     ByteBuffer blobRecord = ByteBuffer.allocate(trail.serialSize() + TRAIL_OVERHEAD);
     trail.writeTo(blobRecord).putLong(id).clear();
@@ -128,7 +155,13 @@ public class TrailRepo implements Closeable {
   }
   
   
-  
+  /**
+   * Returns the crumtrail at the given {@code index}.
+   * 
+   * @param index &ge; 0 and &lt; {@linkplain #size() size}
+   * 
+   * @see #putTrail(CrumTrail, long)
+   */
   public CrumTrail getTrail(long index) {
     if (index < 0)
       throw new IllegalArgumentException("negative index " + index);
@@ -219,6 +252,13 @@ public class TrailRepo implements Closeable {
   }
   
   
+  /**
+   * Returns a lazily loaded list of IDs put along with each crumtrail.
+   * 
+   * @return ordered list of IDs put into the store (of size {@linkplain #size()})
+   * 
+   * @see #putTrail(CrumTrail, long)
+   */
   public List<Long> getIds() {
     try {
       
@@ -233,7 +273,7 @@ public class TrailRepo implements Closeable {
     }
   }
   
-  
+  /** @return {@code size() == 0} */
   public boolean isEmpty() {
     return size() == 0;
   }

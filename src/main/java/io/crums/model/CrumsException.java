@@ -28,10 +28,11 @@ public abstract class CrumsException extends RuntimeException {
 
 
   /**
+   * <p>
    * So you can do factory-style exception-handling. E.g. you can
    * have a factory method {@code buildException()}
    * which you can invoke this way with a clearer stack trace.
-   * <p><pre>
+   * </p><pre>
    * 
    *  CrumsException buildException(Exception e) { .. }
    * 
@@ -43,7 +44,7 @@ public abstract class CrumsException extends RuntimeException {
    *      throw buildException(x).fillInStackTrace();
    *    }
    *  }
-   * </pre></p>
+   * </pre>
    */
   @Override
   public synchronized CrumsException fillInStackTrace() {

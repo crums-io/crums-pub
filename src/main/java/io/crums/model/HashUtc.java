@@ -14,7 +14,7 @@ import java.util.Date;
 import io.crums.util.IntegralStrings;
 
 /**
- * A 32 byte hash, plus an 8 byte <tt>long</tt> representing a witness time.
+ * A 32 byte hash, plus an 8 byte <code>long</code> representing a witness time.
  */
 public class HashUtc {
   
@@ -58,7 +58,7 @@ public class HashUtc {
   
   
   /**
-   * Serializes the given hash/utc tuple to the given <tt>out</tt> buffer. The point of this method
+   * Serializes the given hash/utc tuple to the given <code>out</code> buffer. The point of this method
    * is to centralize serialization/deserializaton format (since it's changed).
    * 
    * @param hash {@linkplain Constants#HASH_WIDTH} bytes long
@@ -66,7 +66,7 @@ public class HashUtc {
    * @param out assumed to have remaining bytes. On return, assuming good
    *  arguments, the position is advanced {@linkplain #DATA_SIZE} bytes.
    *  
-   *  @return the <tt>out</tt> argument (unflipped)
+   *  @return the <code>out</code> argument (unflipped)
    * 
    * @see #HashUtc(ByteBuffer) constructor for <em>deserialization</em>.
    * @see #writeToBuffer(ByteBuffer, long, ByteBuffer)
@@ -80,7 +80,7 @@ public class HashUtc {
   
 
   /**
-   * Serializes the given hash/utc tuple to the given <tt>out</tt> buffer. The point of this method
+   * Serializes the given hash/utc tuple to the given <code>out</code> buffer. The point of this method
    * is to centralize serialization/deserializaton format (since it's changed).
    * 
    * @param hash {@linkplain Constants#HASH_WIDTH} remaning bytes
@@ -88,7 +88,7 @@ public class HashUtc {
    * @param out assumed to have remaining bytes. On return, assuming good
    *  arguments, the position is advanced {@linkplain #DATA_SIZE} bytes.
    *  
-   *  @return the <tt>out</tt> argument (unflipped)
+   *  @return the <code>out</code> argument (unflipped)
    * 
    * @see #HashUtc(ByteBuffer) constructor for <em>deserialization</em>.
    * @see #writeToBuffer(byte[], long, ByteBuffer)
@@ -163,7 +163,7 @@ public class HashUtc {
 
   
   /**
-   * Bounds checks the given <tt>utc</tt> as one that could possibly be issued by the service.
+   * Bounds checks the given <code>utc</code> as one that could possibly be issued by the service.
    */
   protected final void sanityCheckUtc(long utc) {
     if (utc < INCEPTION_UTC)
@@ -205,7 +205,7 @@ public class HashUtc {
    * 
    * @return a buffer with {@linkplain #DATA_SIZE} remaining bytes.
    * 
-   * @see #Crum(ByteBuffer)
+   * @see Crum#Crum(ByteBuffer)
    */
   public ByteBuffer serialForm() {
     return data.asReadOnlyBuffer().limit(DATA_SIZE);

@@ -49,11 +49,11 @@ public interface Entity {
    * override to exploit logical shortcuts if computing {@linkplain #bytes()}
    * is expensive.
    * </p>
-   * <h3>Independence From Object::equals</h3>
+   * <h4>Independence From Object::equals</h4>
    * <p>
    * <em>Note this method is generally
-   * <b>not consistent</b> with <tt>Object.equals(Object)</tt></em> (and therefore
-   * not consistent with {@linkplain #hashCode()} either).
+   * <b>not consistent</b> with <code>Object.equals(Object)</code></em> (and therefore
+   * not consistent with {@code Object.hashCode()} either).
    * </p>
    * 
    * @param entity non-null

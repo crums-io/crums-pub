@@ -36,46 +36,50 @@ import io.crums.model.json.TreeRefParser;
 /**
  * The crums REST client.
  * 
- * <h1>Usage</h1>
+ * <h2>Usage</h2>
  * <p>
  * This following does not require setup:
+ * </p>
  * <ul>
  * <li>{@linkplain #getBeacon()}</li>
  * </ul>
- * </p><p>
+ * <p>
  * More typically there are hashes to be witnessed, their crumtrails to be retrieved.
  * This a 2 step process. First the hashes are gathered. To set a <em>single hash</em> invoke
  * one of the following:
+ * </p>
  * <ul>
  * <li>{@linkplain #setHash(byte[])}</li>
  * <li>{@linkplain #setHash(ByteBuffer)}</li>
  * <li>{@linkplain #setHash(String)}</li>
  * </ul>
- * </p><p>
+ * <p>
  * To set <em>multiple</em> hashes invoke any of
+ * </p>
  * <ul>
  * <li>{@linkplain #addHash(byte[])}</li>
  * <li>{@linkplain #addHash(ByteBuffer)}</li>
  * <li>{@linkplain #addHash(String)}</li>
  * </ul>
- * for each hash.
- * </p><p>
- * There are 2 choices for retrieving {@linkplain CrumRecord}s for the hashes:
+ * <p>
+ * for each hash. There are 2 choices for retrieving {@linkplain CrumRecord}s for the hashes:
+ * </p>
  * <ul>
  * <li>{@linkplain #getCrumRecordsAsJson()}</li>
  * <li>{@linkplain #getCrumRecords()}</li>
  * </ul>
+ * <p>
  * Note the above 2 methods do not clear the instance's hashes. To do that
+ * </p>
  * <ul>
  * <li>{@linkplain #clearHashes()}</li>
  * </ul>
- * </p>
  * <p>
  * Also note that methods like this that change instance state (i.e. methods with side effects)
  * return the instance itself for invocation chaining.
  * </p>
  * <h2>Not Thread-safe</h2>
- * <p><i>Instances are not thread-safe</i>. To access the server from multiple threads, use one instance per thread.</p>
+ * <p><em>Instances are not thread-safe</em>. To access the server from multiple threads, use one instance per thread.</p>
  * <p>
  * TODO: add list tree-refs
  * </p>
@@ -242,7 +246,7 @@ public class Client {
   /**
    * Returns the server response as a json object.
    * 
-   * @return either a <tt>JSONObject</tt> or <tt>JSONArray</tt>
+   * @return either a <code>JSONObject</code> or <code>JSONArray</code>
    */
   public Object getCrumRecordsAsJson() throws ClientException {
     if (hashes.isEmpty())

@@ -24,9 +24,10 @@ import io.crums.util.mrkl.index.TreeIndex;
 /**
  * Generates {@linkplain Statement}s derived from Merkle {@linkplain Proof}s.
  * 
- * <h3>Structure</h3>
+ * <h2>Structure</h2>
  * <p>
  * The general structure of returned statements is as follows.
+ * </p>
  * <ol>
  * <li><em>LHS</em>. A hex literal equal to the value of the root node in the Merkle tree.
  *     (A proof redundantly contains the root value of the tree.)</li>
@@ -34,7 +35,7 @@ import io.crums.util.mrkl.index.TreeIndex;
  *     Merkle tree. The proof-item may be used as is, or may be substituted with an expression
  *     that evaluates to the proof-item (typically the hash of another byte string).</li>
  * </ol>
- * </p><p>
+ * <p>
  * This way, the <em>intent</em> of such a statement is more transparent to a human reader;
  * to validate the statement of course, a piece of software (such as provided in this library)
  * must be used. 
@@ -49,7 +50,7 @@ public class ProofStatement {
   
   
   /**
-   * Creates and returns a <tt>Statement</tt> for the given <tt>proof</tt>.
+   * Creates and returns a <code>Statement</code> for the given <code>proof</code>.
    */
   public static Statement createStatement(Proof proof) {
     return createItemStatement(proof, null);
@@ -57,10 +58,10 @@ public class ProofStatement {
   
   
   /**
-   * Creates and returns a <tt>Statement</tt> for the given proof and <em>optional</em>
-   * item definition <tt>itemDef</tt>. If provided, this must {@linkplain Parser#parse(String) parse}
+   * Creates and returns a <code>Statement</code> for the given proof and <em>optional</em>
+   * item definition <code>itemDef</code>. If provided, this must {@linkplain Parser#parse(String) parse}
    * to an {@linkplain Entity entity} that evaluates to the value of the {@linkplain Proof#item() item}
-   * in the proof; if not provided (<tt>null</tt>), then a hex literal equal to the proof's item itself
+   * in the proof; if not provided (<code>null</code>), then a hex literal equal to the proof's item itself
    * is used.
    */
   public static Statement createItemStatement(Proof proof, CharSequence itemDef) {

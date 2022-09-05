@@ -229,9 +229,9 @@ public class CrumTrail extends Proof implements Serial {
    * and the hex of the crum's UTC expressed as an 8-byte sequence (size of long),
    * seperated by a space character. On the RHS, the user finds the value of the
    * root of the Merkle tree. This serves as a "full" hash pointer: it can be used to
-   * construct a URL to reference the tree's permanent record at <tt>https://crums.io</tt>.
+   * construct a URL to reference the tree's permanent record at <code>https://crums.io</code>.
    * 
-   * @return a statement that {@linkplain Statement#eval() eval}uates to <tt>true</tt>
+   * @return a statement that {@linkplain Statement#eval() eval}uates to <code>true</code>
    */
   public Statement toStatement() {
     ByteBuffer utcBuffer = ByteBuffer.wrap(new byte[8]);

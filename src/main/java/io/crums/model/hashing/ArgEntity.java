@@ -21,7 +21,7 @@ abstract class ArgEntity extends BaseEntity {
 
 
   /**
-   * @return <tt>true</tt>
+   * @return <code>true</code>
    */
   @Override
   public final boolean delimited() {

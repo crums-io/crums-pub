@@ -34,7 +34,7 @@ abstract class BaseEntity implements Entity {
   }
   
   /**
-   * Returns {@linkplain #toText()}<tt>.toString()</tt>.
+   * Returns {@linkplain #toText()}<code>.toString()</code>.
    */
   @Override
   public String toString() {
