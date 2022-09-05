@@ -5,11 +5,11 @@
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   
   
   <properties>
-    <revision>1.0.0-SNAPSHOT</revision>
+    <revision>1.0.0</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
     <crums.util>1.0.0</crums.util>
@@ -20,7 +20,9 @@
   <name>${project.groupId}::${project.artifactId}</name>
   <url>https://crums.io/project/crums-core</url>
   
-  <description>Crums data model, parsers (JSON) and utilities</description>
+  <description>
+    Crums data model (for vending witness records), parsers (JSON) and utilities
+  </description>
   
   
   
