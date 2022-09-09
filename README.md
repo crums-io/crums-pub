@@ -1,25 +1,41 @@
-# crums-pub
 
-Data model, parsers, and utilities for creating and verifying tamper-proof data, witness proofs, timestamping, and custom-defined tamper-proof structures.
+<img src="./docs/logo.png"/>
 
-## Overview
+crums-core
+==========
 
-Repo for the public interfaces and data abstractions used in the crums.io project.
+Data model, parsers, and utilities for creating and verifying tamper-proof witness proofs,
+and timestamping records. This same library is used by the servers to implement
+the [crums.io](https://crums.io) time chain.
+
+## Maven
+
+To use this module add this dependency in your POM file:
+
+```
+  <dependency>
+    <groupId>io.crums</groupId>
+    <artifactId>crums-core</artifactId>
+    <version>1.0.0</version>
+  </dependency>
+```
+
+## Requirements
+
+JDK 17+ required.
+
+## Building
 
 
-## Dependencies
+To build the project from source clone the repo and then invoke
 
-Project dependencies are listed in the maven `pom.xml` file. A few of these have no publicly distributed artifacts, and must be installed manually:
+```
+$ mvn clean install -DskipTests
+```
 
-* [junit-io](https://github.com/gnahraf/junit-io)
-* [merkle-tree](https://github.com/crums-io/merkle-tree)
-* [io-util](https://github.com/crums-io/io-util)
-
-To build to these, clone the above repos (in the suggested order) and invoke
-
-> mvn clean install -DskipTests=true
-
-in each of their directories. Omit the last argument above, to include unit tests.
+To run the tests (w/o the `-DskipTests` option), you must first clone and install this
+[junit-io](https://github.com/gnahraf/junit-io) library locally.
+(This will be fixed in the next version.)
 
 ## Documentation
 
