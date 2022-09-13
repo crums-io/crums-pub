@@ -5,16 +5,16 @@
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
   
   
   <properties>
-    <revision>1.0.0</revision>
+    <revision>1.0.1-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
-    <crums.util>1.0.0</crums.util>
+    <crums.util>[1.0.0,)</crums.util>
     <crums.mrkl>1.0.0</crums.mrkl>
-    <crums.jsonimple>1.0.0</crums.jsonimple>
+    <crums.jsonimple>[1.0.0,)</crums.jsonimple>
   </properties>
   
   <name>${project.groupId}::${project.artifactId}</name>
