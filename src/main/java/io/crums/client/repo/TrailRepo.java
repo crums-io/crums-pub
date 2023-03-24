@@ -41,6 +41,27 @@ import io.crums.util.TaskStack;
  */
 public class TrailRepo implements Closeable {
   
+  /** Tests whether there is a saved repo in the given directory. No side effects. */
+  public static boolean isPresent(File dir) {
+    return
+        new File(dir, IDX_FILE).isFile() &&
+        new File(dir, BLOB_FILE).isFile();
+  }
+  
+  /**
+   * Path to fixed width index table file.
+   */
+  public static File indexFile(File dir) {
+    return new File(dir, IDX_FILE);
+  }
+  
+  /**
+   * Path to sequential blob file containing the {@linkplain CrumTrail}s.
+   */
+  public static File blobFile(File dir) {
+    return new File(dir, BLOB_FILE);
+  }
+  
   /**
    * Fixed width index table filename.
    * (Created under {@linkplain #getDir() dir}.)
@@ -103,12 +124,12 @@ public class TrailRepo implements Closeable {
     try (TaskStack onFail = new TaskStack()) {
       
       this.idx = Table.newSansKeystoneInstance(
-          opening.openChannel(new File(dir, IDX_FILE)),
+          opening.openChannel(indexFile(dir)),
           IDX_ROW_WIDTH);
       
       onFail.pushClose(idx);
       
-      this.blobs = opening.openChannel(new File(dir, BLOB_FILE));
+      this.blobs = opening.openChannel(blobFile(dir));
       
       onFail.clear();
     }
