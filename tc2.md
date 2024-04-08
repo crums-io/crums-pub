@@ -130,15 +130,18 @@ and when zero, the hash of the empty set is encoded as a sequence of zeroed byte
 The chain's blocks are threaded via hashpointers to previous blocks. The number of
 these pointers is uniquely determined by the block number (1 plus the number of times
 the block number is divisible by 2). The values of these hashpointers, however, are not
-directly written into the block; rather, it is the computed hash of the block itself
-that is written in the block.
+directly written into the block (their values are looked up in the previous block no.s
+they point to); rather, it is the computed hash of the block itself that gets written to
+the block. (The hash of the block is computed as the hash of the concatenation of the
+cargo hash with the hash of blocks it "points" to.)
+
 
 ## Ballpark Calculations
 
 68 bytes per block
 
     4       # of hashes witnessed in block
-    32      root hash of witnessed hashes
+    32      cargo hash (hash of witnessed crums)
     32      block hash
     ---
     68 bytes
