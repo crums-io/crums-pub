@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 
-import com.gnahraf.test.SelfAwareTestCase;
+import io.crums.testing.SelfAwareTestCase;
 
 import io.crums.util.hash.Digest;
 import io.crums.util.hash.Digests;

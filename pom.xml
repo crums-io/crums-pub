@@ -5,14 +5,14 @@
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>1.0.1-SNAPSHOT</version>
+  <version>2.0.0-SNAPSHOT</version>
   
   
   <properties>
-    <revision>1.0.1-SNAPSHOT</revision>
+    <revision>2.0.0-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
-    <crums.util>[1.0.0,)</crums.util>
+    <crums.util>1.0.4-SNAPSHOT</crums.util>
     <crums.mrkl>1.0.0</crums.mrkl>
     <crums.jsonimple>[1.0.0,)</crums.jsonimple>
   </properties>
@@ -242,11 +242,10 @@
       <scope>test</scope>
     </dependency>
     
-    <!--  Install manually. See https://github.com/gnahraf/junit-io -->
     <dependency>
-      <groupId>com.gnahraf</groupId>
-      <artifactId>junit-io</artifactId>
-      <version>0.0.1</version>
+      <groupId>io.crums</groupId>
+      <artifactId>unit-io</artifactId>
+      <version>1.0.0</version>
       <scope>test</scope>
     </dependency>
     

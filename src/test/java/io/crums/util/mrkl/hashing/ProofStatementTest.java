@@ -10,7 +10,7 @@ import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 
-import com.gnahraf.test.SelfAwareTestCase;
+import io.crums.testing.SelfAwareTestCase;
 
 import io.crums.model.hashing.Statement;
 import io.crums.util.hash.Digests;
