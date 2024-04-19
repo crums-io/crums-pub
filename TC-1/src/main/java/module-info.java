@@ -1,4 +1,4 @@
-module io.crums.legacy.tc {
+module io.crums.legacy.tc1 {
   
   requires transitive io.crums.util.mrkl;
   requires transitive io.crums.jsonimple;
