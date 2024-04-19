@@ -12,10 +12,9 @@
     <revision>1.0.1-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
-    <crums.util>1.0.4-SNAPSHOT</crums.util>
-    <crums.jsonimple>1.0.4-SNAPSHOT</crums.jsonimple>
+    <crums.util>1.0.3</crums.util>
+    <crums.jsonimple>1.0.3</crums.jsonimple>
     <crums.mrkl>1.0.0</crums.mrkl>
-    <crums.sldg>0.6.0-SNAPSHOT</crums.sldg>
   </properties>
   
   <name>${project.groupId}::${project.artifactId}</name>
