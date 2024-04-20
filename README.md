@@ -1,44 +1,22 @@
 
 <img src="./docs/logo.png"/>
 
-crums-core
+crums-pub
 ==========
 
-Data model, parsers, and utilities for creating and verifying tamper-proof witness proofs,
-and timestamping records. This same library is used by the servers to implement
-the [crums.io](https://crums.io) time chain.
+This is the source repo for the Crums time chain. A new version
+of the time chain is being developed. Each lives under its own
+subdirectory:
 
-## Maven
+* [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain) Under development
+* [TC-1](https://github.com/crums-io/crums-pub/tree/main/TC-1) Legacy chain
 
-To use this module add this dependency in your POM file:
-
-```
-  <dependency>
-    <groupId>io.crums</groupId>
-    <artifactId>crums-core</artifactId>
-    <version>1.0.0</version>
-  </dependency>
-```
-
-## Requirements
-
-JDK 17+ required.
-
-## Building
-
-
-To build the project from source clone the repo and then invoke
-
-```
-$ mvn clean install -DskipTests
-```
-
-To run the tests (w/o the `-DskipTests` option), you must first clone and install this
-[junit-io](https://github.com/gnahraf/junit-io) library locally.
-(This will be fixed in the next version.)
+Good things are coming.. to see what's ahead see this working
+[design doc](https://github.com/crums-io/crums-pub/tree/main/tc2.md).
 
 ## Documentation
 
-The project documentation site is [here](https://crums-io.github.io/crums-pub/).
+The project documentation site is [here](https://crums-io.github.io/crums-pub/),
+tho it is presently dated.
 
 
