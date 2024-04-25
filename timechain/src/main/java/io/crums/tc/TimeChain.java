@@ -14,12 +14,15 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.Objects;
 
 import io.crums.io.Opening;
 import io.crums.io.channels.ChannelUtils;
+import io.crums.sldg.Path;
 import io.crums.sldg.Row;
 import io.crums.sldg.SkipLedger;
+import io.crums.tc.except.TimeChainException;
 import io.crums.util.Strings;
 import io.crums.util.TaskStack;
 
@@ -27,7 +30,7 @@ import io.crums.util.TaskStack;
  * A time chain backed by a file. The blocks in the time chain model
  * a skip ledger's rows.
  * 
- * @see #recordBlockForUtc(long, ByteBuffer, int)
+ * @see #recordBlockForUtc(long, ByteBuffer)
  * @see SkipLedger
  * @see SkipBlock
  */
@@ -106,7 +109,7 @@ public class TimeChain extends SkipLedger implements Channel {
       
       var params = ChainParams.load(buffer);
       
-      var chain = new TimeChain(params, ch, chainHead, readOnly);
+      var chain = new TimeChain(file, params, ch, chainHead, readOnly);
       closeOnFail.clear();
       return chain;
     }
@@ -170,15 +173,17 @@ public class TimeChain extends SkipLedger implements Channel {
       ChannelUtils.writeRemaining(ch, 0, buffer);
       ch.force(false);
       
-      var chain = new TimeChain(params, ch, headerSize, false);
+      var chain = new TimeChain(file, params, ch, headerSize, false);
       closeOnFail.clear();
       return chain;
     }
   }
   
+  // no null check
+  private final File file;
   
   private final ChainParams params;
-  private final FileChannel file;
+  private final FileChannel ch;
   private final long headerSize;
   private boolean readOnly;
   
@@ -188,9 +193,11 @@ public class TimeChain extends SkipLedger implements Channel {
   /**
    * 
    */
-  public TimeChain(ChainParams params, File file, int headerSize, boolean readOnly)
+  public TimeChain(
+      ChainParams params, File file, int headerSize, boolean readOnly)
       throws IOException {
     this(
+        file,
         params,
         (readOnly ?
             Opening.READ_ONLY :
@@ -200,29 +207,36 @@ public class TimeChain extends SkipLedger implements Channel {
   }
   
   
-  protected TimeChain(ChainParams params, FileChannel file, int headerSize, boolean readOnly) {
+  protected TimeChain(File file, ChainParams params, FileChannel ch, int headerSize, boolean readOnly) {
+    this.file = file;
     this.params = Objects.requireNonNull(params, "null params");
-    this.file = Objects.requireNonNull(file, "null file");
+    this.ch = Objects.requireNonNull(ch, "null channel");
     this.headerSize = headerSize;
     this.readOnly = readOnly;
     
     if (headerSize < 0)
       throw new IllegalArgumentException("headerSize " + headerSize);
     
-    if (!file.isOpen())
+    if (!ch.isOpen())
       throw new IllegalArgumentException("file channel closed");
+  }
+  
+  
+  
+  public File file() {
+    return file;
   }
   
 
   @Override
   public boolean isOpen() {
-    return file.isOpen();
+    return ch.isOpen();
   }
 
   @Override
   public void close() throws UncheckedIOException {
     try {
-      file.close();
+      ch.close();
     } catch (IOException iox) {
       throw new UncheckedIOException("on closing " + this, iox);
     }
@@ -249,7 +263,7 @@ public class TimeChain extends SkipLedger implements Channel {
   /**
    * Not supported.
    * 
-   * @see #recordBlockForUtc(long, ByteBuffer, int)
+   * @see #recordBlockForUtc(long, ByteBuffer)
    */
   @Override
   public long appendRows(ByteBuffer entryHashes)
@@ -284,12 +298,11 @@ public class TimeChain extends SkipLedger implements Channel {
    * 
    * @param utc         the block no. is inferred from this
    * @param cargoHash   the hash of the set of crums witnessed
-   * @param crumCount   the number of hashes (crums) witnessed
    * 
    * @return the number of empty blocks added
-   * @see #recordBlockNo(long, ByteBuffer, int)
+   * @see #recordBlockNo(long, ByteBuffer)
    */
-  public long recordBlockForUtc(long utc, ByteBuffer cargoHash, int crumCount)
+  public long recordBlockForUtc(long utc, ByteBuffer cargoHash)
       throws IOException {
     long now = System.currentTimeMillis();
     if (utc > now)
@@ -297,30 +310,31 @@ public class TimeChain extends SkipLedger implements Channel {
           "utc (" + utc + ") > system time (" + now + ")");
     
     long blockNo = params.blockNoForUtc(utc);
-    return recordBlockNo(blockNo, cargoHash, crumCount);
+    return recordBlockNo(blockNo, cargoHash);
   }
   
   
   /**
-   * @see #recordBlockForUtc(long, ByteBuffer, int)
+   * @see #recordBlockForUtc(long, ByteBuffer)
    */
-  public long recordBlockForUtc(long utc, byte[] cargoHash, int crumCount)
+  public long recordBlockForUtc(long utc, byte[] cargoHash)
       throws IOException {
-    return recordBlockForUtc(utc, ByteBuffer.wrap(cargoHash), crumCount);
+    return recordBlockForUtc(utc, ByteBuffer.wrap(cargoHash));
   }
   
   
   
   /**
-   * Meat of recording time chain blocks. Not exposed cause it uses
-   * block no.s, which is more error prone for the user that simply using
+   * Meat of recording time chain blocks. This is
+   * more error prone for the user that simply using
    * a "representative" UTC in lieu of a block no.
    * 
-   * @see #recordBlockForUtc(long, ByteBuffer, int)
+   * @see #recordBlockForUtc(long, ByteBuffer)
    */
-  protected long recordBlockNo(
-      long blockNo, ByteBuffer cargoHash, int crumCount)
+  public long recordBlockNo(
+      long blockNo, ByteBuffer cargoHash)
       throws IOException {
+    
     
     final long blockCount = blockCount();
     
@@ -328,34 +342,26 @@ public class TimeChain extends SkipLedger implements Channel {
       throw new IllegalStateException(
           "cannot overwrite block no. " + blockNo );
     
-    if (crumCount == 0) {
-      if (!DIGEST.sentinelHash().equals(cargoHash))
-        throw new IllegalArgumentException(
-            "cargo hash must be sentinel (zeroes) when crum count is zero: " +
-            cargoHash);
-    
-    } else if (crumCount < 0)
-      throw new IllegalArgumentException("negative crum count: " + crumCount);
-    
+
     for (long zBlockNo = blockCount; ++zBlockNo < blockNo; )
       writeEmptyBlock(zBlockNo);
     
-    writeBlock(blockNo, cargoHash, crumCount);
-    file.force(false);
-    return blockNo - blockCount - 1;
+    writeBlock(blockNo, cargoHash);
+    ch.force(false);
+    return blockNo - blockCount;
   }
   
   
   private void writeEmptyBlock(long blockNo) throws IOException {
-    writeBlock(blockNo, DIGEST.sentinelHash(), 0);
+    writeBlock(blockNo, DIGEST.sentinelHash());
   }
   
-  private void writeBlock(long blockNo, ByteBuffer cargoHash, int crums)
+  private void writeBlock(long blockNo, ByteBuffer cargoHash)
       throws IOException {
     
     Block block = new BuildBlock(blockNo, cargoHash).toBlock();
     long offset = blockOffset(blockNo);
-    ChannelUtils.writeRemaining(file, offset, block.serialize());
+    ChannelUtils.writeRemaining(ch, offset, block.serialize());
   }
   
   
@@ -367,17 +373,17 @@ public class TimeChain extends SkipLedger implements Channel {
    * Returns the block count.
    */
   public long blockCount() throws IOException {
-    return (file.size() - headerSize) / Block.BYTE_SIZE;
+    return (ch.size() - headerSize) / Block.BYTE_SIZE;
   }
 
   
   @Override
-  public long size() throws UncheckedIOException {
+  public long size() throws TimeChainException {
     try {
       return blockCount();
     
     } catch (IOException iox) {
-      throw new UncheckedIOException("on reading file length", iox);
+      throw new TimeChainException("on reading file length", iox);
     }
   }
   
@@ -388,13 +394,36 @@ public class TimeChain extends SkipLedger implements Channel {
   }
   
   
+  public BlockProof getBlockProof(long target) {
+    return getBlockProof(1L, target, size());
+  }
+  
+  public BlockProof getBlockProof(long lo, long target, long hi) {
+    
+    if (lo < 1 || target < lo || hi < target) {
+      Long[] args = { lo, target, hi };
+      throw new IllegalArgumentException(
+          Arrays.asList(args).toString());
+    }
+    
+    Path bPath =
+        (target == lo || target == hi) ?
+            getPath(lo, hi) :
+              getPath(lo, target, hi);
+    
+    // bPath is lazy.. pack it
+    bPath = bPath.pack().path();
+    return new BlockProof(params, bPath);
+  }
+  
+  
   
   public SkipBlock getBlock(long blockNo) throws IOException {
     checkRealRowNumber(blockNo);
     Objects.checkIndex(blockNo - 1, blockCount());
     long offset = blockOffset(blockNo);
     ByteBuffer buffer = ByteBuffer.allocate(Block.BYTE_SIZE);
-    ChannelUtils.readRemaining(file, offset, buffer).flip();
+    ChannelUtils.readRemaining(ch, offset, buffer).flip();
     Block block = new Block(buffer, false);
     return new ChainBlock(blockNo, block);
   }
@@ -427,7 +456,7 @@ public class TimeChain extends SkipLedger implements Channel {
       ByteBuffer buffer = ByteBuffer.allocate(HASH_WIDTH);
       
       return
-          ChannelUtils.readRemaining(file, offset, buffer)
+          ChannelUtils.readRemaining(ch, offset, buffer)
           .flip()
           .asReadOnlyBuffer();
       

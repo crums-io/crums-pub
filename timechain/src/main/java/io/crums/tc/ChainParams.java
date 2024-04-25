@@ -15,10 +15,9 @@ import io.crums.io.Serial;
  * 
  * <ol>
  * <li>No. of milliseconds a block spans. This is always a positive
- * power of 2 in order to simplify the arithmetic.</li>
+ * power of 2.</li>
  * <li>The starting time of the first block.</li>
  * </ol>
- * 
  */
 public class ChainParams implements Serial {
   
@@ -69,6 +68,37 @@ public class ChainParams implements Serial {
   }
   
   
+  /**
+   * <p>Instances are equal if they have the same time binner and
+   * inception UTC.</p>
+   * {@inheritDoc}
+   */
+  @Override
+  public final boolean equals(Object o) {
+    return o == this ||
+        o instanceof ChainParams other &&
+        inceptionUtc == other.inceptionUtc &&
+        binInterval == other.binInterval;
+  }
+  
+  
+  /**
+   * <p>Consistent with {@linkplain #equals(Object)}.</p>
+   * {@inheritDoc}
+   */
+  @Override
+  public final int hashCode() {
+    return Long.hashCode(inceptionUtc) ^ (int) binInterval;
+  }
+  
+  
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() +
+        "[" + inceptionUtc + ":" + timeBinner.binExponent() + "]";
+  }
+  
+  
   
   public final TimeBinner timeBinner() {
     return timeBinner;
@@ -84,7 +114,7 @@ public class ChainParams implements Serial {
   
   
   /**
-   * Returns the block number the given {@code utc} falls in.
+   * Checks and returns the block number the given {@code utc} falls in.
    * 
    * @throws IllegalArgumentException
    *         if {@code utc < inceptionUtc()}
@@ -97,12 +127,41 @@ public class ChainParams implements Serial {
     return timeBinner.toBinNo(utc - inceptionUtc) + 1;
   }
   
+  
+  /**
+   * Returns the block number the given {@code utc} falls in. Only
+   * positive return values are valid.
+   */
+  public final long blockNoForUtcUnchecked(long utc) {
+    return timeBinner.toBinNo(utc - inceptionUtc) + 1;
+  }
+  
+  
+  
+  /**
+   * Determines whether the given {@code utc} falls in the given
+   * {@code blockNo}.
+   */
+  public final boolean utcInBlock(long utc, long blockNo) {
+    return
+        utc >= inceptionUtc &&
+        timeBinner.toBinNo(utc - inceptionUtc) + 1 == blockNo;
+    
+  }
+  
   /**
    * Returns the starting (smallest) UTC value for the given
    * block no.
    */
   public final long utcForBlockNo(long block) {
     return inceptionUtc + (block - 1) * binInterval;
+  }
+  
+
+
+
+  public final long blockDuration() {
+    return timeBinner.duration();
   }
   
   

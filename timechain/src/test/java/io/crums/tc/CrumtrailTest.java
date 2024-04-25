@@ -159,10 +159,9 @@ public class CrumtrailTest extends TimeChainTestCase {
         long utc = startUtc + (b - 1) * binner.duration();
         chain.recordBlockForUtc(
             utc,
-            ByteBuffer.wrap(mockHash),
-            1 + b % 5);   // whatever
+            ByteBuffer.wrap(mockHash));
       }
-      chain.recordBlockForUtc(crumUtc, crum.witnessHash(), 1);
+      chain.recordBlockForUtc(crumUtc, crum.witnessHash());
       
       for (long b = blockNo + 1; b <= blockCount; ++b) {
         byte[] mockHash = new byte[Constants.HASH_WIDTH];
@@ -170,8 +169,7 @@ public class CrumtrailTest extends TimeChainTestCase {
         long utc = startUtc + (b - 1) * binner.duration();
         chain.recordBlockForUtc(
             utc,
-            ByteBuffer.wrap(mockHash),
-            1 + (int) b % 5);   // whatever
+            ByteBuffer.wrap(mockHash));
       }
     }
     
@@ -215,12 +213,11 @@ public class CrumtrailTest extends TimeChainTestCase {
         long utc = startUtc + (b - 1) * binner.duration();
         chain.recordBlockForUtc(
             utc,
-            ByteBuffer.wrap(mockHash),
-            1 + b % 5);   // whatever
+            ByteBuffer.wrap(mockHash));
       }
       
       chain.recordBlockForUtc(
-          crumUtc, cargoProof.rootHash(), cargoProof.leafCount());
+          crumUtc, cargoProof.rootHash());
       
       for (long b = blockNo + 1; b <= blockCount; ++b) {
         byte[] mockHash = new byte[Constants.HASH_WIDTH];
@@ -228,8 +225,7 @@ public class CrumtrailTest extends TimeChainTestCase {
         long utc = startUtc + (b - 1) * binner.duration();
         chain.recordBlockForUtc(
             utc,
-            ByteBuffer.wrap(mockHash),
-            1 + (int) b % 5);   // whatever
+            ByteBuffer.wrap(mockHash));
       }
     }
     

@@ -15,7 +15,7 @@ import io.crums.io.Serial;
  * A timestamp, witness to a hash. Instances are immutable.
  * This is a 2-tuple: a hash, and a UTC time.
  */
-public final class Crum extends HashUtc implements Comparable<Crum>, Serial {
+public class Crum extends HashUtc implements Comparable<Crum>, Serial {
   
   
   public static Crum newSearchKey(byte[] hash) {
@@ -62,7 +62,7 @@ public final class Crum extends HashUtc implements Comparable<Crum>, Serial {
    * Instances are ordered firstly by hash; secondly in time. Consistent with equals.
    */
   @Override
-  public int compareTo(Crum o) {
+  public final int compareTo(Crum o) {
     int comp = HASH_COMPARATOR.compare(this, o);
     return comp == 0 ? Long.compare(utc(), o.utc()) : comp;
   }
@@ -74,7 +74,7 @@ public final class Crum extends HashUtc implements Comparable<Crum>, Serial {
    * 
    * @return  32-byte hash
    */
-  public byte[] witnessHash() {
+  public final byte[] witnessHash() {
     return witnessHash(Constants.DIGEST.newDigest());
   }
   
@@ -86,7 +86,7 @@ public final class Crum extends HashUtc implements Comparable<Crum>, Serial {
    * @param digest SHA-256 digester (argument is not checked)
    * @return  32-byte hash
    */
-  public byte[] witnessHash(MessageDigest digest) {
+  public final byte[] witnessHash(MessageDigest digest) {
     digest.reset();
     digest.update(serialForm());
     return digest.digest();
@@ -94,17 +94,17 @@ public final class Crum extends HashUtc implements Comparable<Crum>, Serial {
   
   
   @Override
-  public ByteBuffer serialize() {
-    return data.asReadOnlyBuffer();
+  public final ByteBuffer serialize() {
+    return serialForm();
   }
   @Override
-  public int serialSize() {
+  public final int serialSize() {
     return DATA_SIZE;
   }
   
   @Override
-  public ByteBuffer writeTo(ByteBuffer out) throws BufferOverflowException {
-    return out.put(data.slice());
+  public final ByteBuffer writeTo(ByteBuffer out) throws BufferOverflowException {
+    return out.put(serialForm());
   }
   
   

@@ -26,6 +26,12 @@ import io.crums.tc.except.TimeChainException;
  * <li>A proof asserting the crum's (witness) hash is written directly
  * in as the cargo hash of a block in a time chain.</li>
  * </ol>
+ * <h2>TODO: Design peeve</h2>
+ * <p>
+ * The {@linkplain CargoProof} class ought to implement the logic of
+ * both a merkle tree and a crum's straight hash (what this class
+ * does). Punting for now, in the interest of time.
+ * </p>
  */
 public abstract class Crumtrail implements Serial {
   
@@ -67,8 +73,13 @@ public abstract class Crumtrail implements Serial {
   
   
   
-  public BlockProof blockProof() {
+  public final BlockProof blockProof() {
     return blockProof;
+  }
+  
+  
+  public final ChainParams chainParams() {
+    return blockProof.chainParams();
   }
   
   

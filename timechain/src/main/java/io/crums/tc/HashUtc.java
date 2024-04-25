@@ -111,25 +111,33 @@ public class HashUtc {
    * The positional state is <em>never</em> modified, not even momentarily.
    * (If a subclass does, then it'll likely have undefined concurrent behavior.)
    */
-  protected final ByteBuffer data;
+  private final ByteBuffer data;
   
 
 
   /**
    * Creates a new instance with the given data buffer.
    * 
-   * @param data  the caller agrees not to modify the given buffer in any way; otherwise
-   *              the immutability guarantee is for naught.
+   * @param data  the caller agrees not to modify contents
    *    
    * @see #serialForm()
    */
   public HashUtc(ByteBuffer data) {
     
-    if (data.remaining() < DATA_SIZE)
-      throw new IllegalArgumentException("data remaining: " + data.remaining());
+    data = data.slice();
+    int cap = data.remaining();
+    if (cap != DATA_SIZE) {
+      if (cap > DATA_SIZE)
+        data = data.limit(DATA_SIZE).slice();
+      else
+        throw new IllegalArgumentException("data remaining: " + cap);
+    }
+      
     
-    this.data = data.position() == 0 ? data : data.slice();
-    // a quick but effectve sanity check..
+    
+    this.data = data;
+    
+    // a quick but effective sanity check..
     sanityCheckUtc(utc());
   }
   
@@ -215,9 +223,11 @@ public class HashUtc {
    * 
    * @see Crum#Crum(ByteBuffer)
    */
-  public ByteBuffer serialForm() {
+  public final ByteBuffer serialForm() {
     return data.asReadOnlyBuffer();
   }
+  
+  
   
   /**
    * Instances are equal iff their {@linkplain #hash()}s and {@linkplain #utc()}s  are equal.

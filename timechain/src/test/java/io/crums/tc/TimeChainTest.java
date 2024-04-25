@@ -68,19 +68,14 @@ public class TimeChainTest extends TimeChainTestCase {
     
     TimeChain chain = TimeChain.inceptNewChain(chainFile, binner);
     final long now = System.currentTimeMillis();
-    try {
-      chain.recordBlockForUtc(now, mockHash.slice(), 0);
-      fail();
-    } catch (Exception expected) {
-      System.out.println("[EXPECTED]: " + expected);
-    }
+    
     assertTrue(chain.isEmpty());
     
-    long emptyBlocks = chain.recordBlockForUtc(
-        now, mockHash.slice(), 1);
+    long blocksAdded = chain.recordBlockForUtc(
+        now, mockHash.slice());
     
-    assertTrue(emptyBlocks >= 0);
-    assertEquals(emptyBlocks + 1, chain.blockCount());
+    assertTrue(blocksAdded >= 1);
+    assertEquals(blocksAdded, chain.blockCount());
     
     final Path state = chain.statePath();
     assertEquals(mockHash.slice(), state.last().inputHash());
@@ -194,16 +189,15 @@ public class TimeChainTest extends TimeChainTestCase {
     
     var chain = TimeChain.inceptNewChain(chainFile, binner, startUtc);
     
-    long emptyTally = 0;
+    long tally = 0;
     for (int index = 0; index < blocks; ++index) {
       long utc = startUtc + binner.duration() * index;
-      emptyTally += chain.recordBlockForUtc(
+      tally += chain.recordBlockForUtc(
           utc,
-          cargoHashes.get(index),
-          1 + index % 7);
+          cargoHashes.get(index));
     }
     
-    assertEquals(blocks + emptyTally, chain.blockCount());
+    assertEquals(tally, chain.blockCount());
     
 
     if (verbose) {
