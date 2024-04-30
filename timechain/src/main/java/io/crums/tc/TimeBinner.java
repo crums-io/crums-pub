@@ -61,35 +61,48 @@ public enum TimeBinner {
   SEC_8(13),
   /** 16384 millis, about 16.4 seconds. */
   SEC_16(14),
-  /** 32768 millis, about 32.8 seconds */
+  /** 0m:33s */
   HALF_MINUTE(15),
-  /**
-   * 65536 milliseconds. About 5.5 seconds over a 60-second minute.
-   */
+  /** 1m:06s */
   MINUTE(16),
+  /** 2m:11s */
   MINUTE_2(17),
-  MINUTE_4(18),
-  BIN_19(19),
-  BIN_20(20),
-  BIN_21(21),
-  BIN_22(22),
-  BIN_23(23),
-  BIN_24(24),
-  HALF_DAY(25),
-  /**
-   * About a day less 5 hrs and some twenty minutes.
-   */
-  DAY(26);
+  /** 4m:56s */
+  MINUTE_5(18),
+  /** 8m:44s */
+  MINUTE_9(19),
+  /** 17m:29s */
+  MINUTE_17(20),
+  /** 34m:57s */
+  HALF_HOUR(21),
+  /** 1h:10m */
+  HOUR(22),
+  /** 2h:20m */
+  HOUR_2(23),
+  /** 4h:40m */
+  HOUR_5(24),
+  /** 9h:19m  */
+  HOUR_9(25),
+  /** 18h:38m */
+  HOUR_19(26);
+  // Psst.. on adding more elements, update comment for MAX_EXP
+  
+  
+  /** Minimum bin exponent (1). Inclusive. */
+  public final static int MIN_EXP = 1;
+  /** Maximum bin exponent (26). Inclusive. */
+  public final static int MAX_EXP = values().length;
   
   
   /**
-   * The bit mask is partitioned into 2 contiguous regions: (leading) 1 bits on the left and (trailing) 0 bits on the right.
+   * The bit mask is partitioned into 2 contiguous regions:(leading) 1 bits on the left and (trailing) 0 bits on the right.
    */
   public final long mask;
   
   /**
    * The number of [leading] zeroes in the {@linkplain #mask}.
-   * Positive, less than or equal to 16.
+   * This is the value returned by {@linkplain #binExponent()}.
+   * 1 &le; {@code shift} &le; {@link #MAX_EXP}
    */
   public final int shift;
   
@@ -158,13 +171,6 @@ public enum TimeBinner {
   public long toUtc(long binNo) {
     return binNo << shift;
   }
-  
-  
-  
-  /** Minimum bin exponent (1). Inclusive. */
-  public final static int MIN_EXP = 1;
-  /** Maximum bin exponent (16). Inclusive */
-  public final static int MAX_EXP = values().length;
 
   
   /**

@@ -5,7 +5,8 @@ package io.crums.tc;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-import java.util.Objects;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import io.crums.io.Serial;
 
@@ -34,11 +35,15 @@ public class ChainParams implements Serial {
   }
   
   
+  /**
+   * Size of an instance.
+   * (9): 1 byte for the bin exponent, 8 for the inception UTC.
+   */
   public final static int BYTE_SIZE = 1 + 8;
   
   private final TimeBinner timeBinner;
   private final long inceptionUtc;
-  private final long binInterval;
+  private final long blockDuration;
   
 
   /**
@@ -50,7 +55,7 @@ public class ChainParams implements Serial {
    * @see #forStartUtc(TimeBinner, long)
    */
   public ChainParams(TimeBinner timeBinner, long inceptionUtc) {
-    this.timeBinner = Objects.requireNonNull(timeBinner, "null timeBinner");
+    this.timeBinner = timeBinner;
     this.inceptionUtc = inceptionUtc;
     
     if (inceptionUtc < HashUtc.INCEPTION_UTC)
@@ -64,7 +69,7 @@ public class ChainParams implements Serial {
           "inception UTC does not aligned at time bin boundary: " +
           inceptionUtc);
     
-    this.binInterval = timeBinner.duration();
+    this.blockDuration = timeBinner.duration();
   }
   
   
@@ -77,8 +82,15 @@ public class ChainParams implements Serial {
   public final boolean equals(Object o) {
     return o == this ||
         o instanceof ChainParams other &&
+        equalParams(other);
+  }
+  
+
+  /** Equality sans {@code Object.equals(..)} formalities. */
+  public final boolean equalParams(ChainParams other) {
+    return
         inceptionUtc == other.inceptionUtc &&
-        binInterval == other.binInterval;
+        timeBinner == other.timeBinner;
   }
   
   
@@ -88,14 +100,22 @@ public class ChainParams implements Serial {
    */
   @Override
   public final int hashCode() {
-    return Long.hashCode(inceptionUtc) ^ (int) binInterval;
+    return Long.hashCode(inceptionUtc) ^ timeBinner.hashCode();
   }
   
   
   @Override
   public String toString() {
-    return getClass().getSimpleName() +
-        "[" + inceptionUtc + ":" + timeBinner.binExponent() + "]";
+    return
+        "[" + timeBinner.binExponent() + ":" + inceptionUtc + "(" +
+        timeBinner + ":" + inceptDateString() + ")]";
+  }
+  
+  
+  private String inceptDateString() {
+    return
+        new SimpleDateFormat("yyyy/MM/dd_HH:mm:ss.SSS")
+        .format(new Date(inceptionUtc));
   }
   
   
@@ -154,14 +174,14 @@ public class ChainParams implements Serial {
    * block no.
    */
   public final long utcForBlockNo(long block) {
-    return inceptionUtc + (block - 1) * binInterval;
+    return inceptionUtc + (block - 1) * blockDuration;
   }
   
 
 
 
   public final long blockDuration() {
-    return timeBinner.duration();
+    return blockDuration;
   }
   
   

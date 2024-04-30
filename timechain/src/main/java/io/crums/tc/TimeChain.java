@@ -62,6 +62,18 @@ public class TimeChain extends SkipLedger implements Channel {
 
   public final static int DEFAULT_CHAIN_HEAD = PREAMBLE_BYTES;
   
+  
+  /**
+   * Loads and returns an existing instance in read/write mode.
+   * 
+   * @param file      existing time chain file
+   * @return          {@linkplain #load(File, boolean) load(file, false)}
+   */
+  public static TimeChain load(File file) throws IOException {
+    return load(file, false);
+  }
+  
+  
   /**
    * Loads and returns an existing instance.
    * 
@@ -407,8 +419,8 @@ public class TimeChain extends SkipLedger implements Channel {
     }
     
     Path bPath =
-        (target == lo || target == hi) ?
-            getPath(lo, hi) :
+        (target == hi || target == lo) ?
+            statePath() :
               getPath(lo, target, hi);
     
     // bPath is lazy.. pack it
