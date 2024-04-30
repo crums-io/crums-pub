@@ -3,7 +3,6 @@
  */
 package io.crums.tc.notary;
 
-import java.util.Objects;
 
 import io.crums.tc.ChainParams;
 
@@ -13,9 +12,12 @@ import io.crums.tc.ChainParams;
  * @see NotarySettings
  */
 public class NotaryPolicy {
+
+  
+  public final static int MIN_BLOCKS_RETAINED = 3;
   
   
-  public final static int MIN_BLOCK_COMMIT_LAG = 128;
+  public final static int MIN_BLOCK_COMMIT_LAG = 2;
   
 
   private final ChainParams params;
@@ -23,21 +25,41 @@ public class NotaryPolicy {
   private final int blocksRetained;
   
   private final int blockCommitLag;
+  
+  
+  
+  public NotaryPolicy(ChainParams params, int blocksRetained) {
+    this(
+        params, blocksRetained,
+        Math.max((int) params.blockDuration() / 2, MIN_BLOCK_COMMIT_LAG));
+  }
+  
 
   public NotaryPolicy(
       ChainParams params, int blocksRetained, int blockCommitLag) {
-    this.params = Objects.requireNonNull(params);
+    this.params = params; // (null checked below)
     this.blocksRetained = blocksRetained;
     this.blockCommitLag = blockCommitLag;
     
-    if (blocksRetained < 1)
+    if (blocksRetained < MIN_BLOCKS_RETAINED)
       throw new IllegalArgumentException(
-          "blockRetained: " + blocksRetained);
+          "blocksRetained (" + blocksRetained + ") < MIN_BLOCKS_RETAINED (" +
+          MIN_BLOCKS_RETAINED + ")");
     if (blockCommitLag < MIN_BLOCK_COMMIT_LAG)
       throw new IllegalArgumentException(
           "blockCommitLag (" + blockCommitLag +
           ") <  MIN_BLOCK_COMMIT_LAG (" +
           MIN_BLOCK_COMMIT_LAG + ")");
+    
+    // (params null check too)
+    if (blockCommitLag >=
+        (blocksRetained / 3) * params.timeBinner().duration())
+      
+      throw new IllegalArgumentException(
+          "blockCommitLag (" + blockCommitLag +
+          ")  too large for given blocksRetained (" +
+          blocksRetained + ") and binner " + params.timeBinner());
+          
   }
   
   
@@ -72,4 +94,31 @@ public class NotaryPolicy {
     return blockCommitLag;
   }
   
+  
+  
+  
+  /** Equality sans {@code Object.equals(..)} formalities. */
+  public final boolean equalPolicy(NotaryPolicy other) {
+    return
+        params.equalParams(other.params) &&
+        blockCommitLag == other.blockCommitLag &&
+        blocksRetained == other.blocksRetained;
+  }
+  
+  
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

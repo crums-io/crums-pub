@@ -23,6 +23,9 @@ public class Receipt {
   public Receipt(ChainParams params, Crum crum) {
     this.params = Objects.requireNonNull(params);
     this.crum = Objects.requireNonNull(crum);
+    if (params.blockNoForUtcUnchecked(crum.utc()) <= 0)
+      throw new IllegalArgumentException(
+          "params/crum.utc() mismatch: " + params + "/" + crum);
     this.trail = null;
   }
   
@@ -47,6 +50,10 @@ public class Receipt {
   
   public final Crum crum() {
     return trail == null ? crum : trail.crum();
+  }
+  
+  public final long blockNo() {
+    return params.blockNoForUtc(crum.utc());
   }
   
   public final Crumtrail trail() {

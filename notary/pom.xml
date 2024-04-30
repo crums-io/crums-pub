@@ -5,11 +5,11 @@
   <groupId>io.crums</groupId>
   <artifactId>notary</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>1.0.0-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
   
   
   <properties>
-    <revision>1.0.0-SNAPSHOT</revision>
+    <revision>0.1.0-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
     <!--
@@ -17,7 +17,7 @@
     <crums.jsonimple>1.0.4-SNAPSHOT</crums.jsonimple>
     <crums.mrkl>1.0.0</crums.mrkl>
     <crums.sldg>0.6.0-SNAPSHOT</crums.sldg> -->
-    <crums.timechain>1.0.0-SNAPSHOT</crums.timechain>
+    <crums.timechain>0.1.0-SNAPSHOT</crums.timechain>
     <crums.stowkwik>[1.0.0,)</crums.stowkwik>
   </properties>
   
@@ -245,7 +245,7 @@
     <dependency>
       <groupId>io.crums</groupId>
       <artifactId>unit-io</artifactId>
-      <version>1.0.0</version>
+      <version>1.0.1</version>
       <scope>test</scope>
     </dependency>
     

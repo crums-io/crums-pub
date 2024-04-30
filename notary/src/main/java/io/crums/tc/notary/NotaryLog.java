@@ -11,7 +11,7 @@ import java.lang.System.Logger.Level;
 public abstract class NotaryLog {
   
   /** Adaptor for {@code System.Logger}. */
-  public final static NotaryLog SYS = new Sys(NotaryConstants.NOTARY_LOG);
+  public final static NotaryLog SYS = new Sys();
   /** Does not log. */
   public final static NotaryLog NULL = new Null();
 
@@ -27,8 +27,8 @@ public abstract class NotaryLog {
     private final System.Logger logger;
     
     
-    public Sys(String name) {
-      this.logger = System.getLogger(name);
+    public Sys() {
+      this.logger = System.getLogger(NotaryConstants.NOTARY_LOG);
     }
 
     @Override

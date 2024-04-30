@@ -50,7 +50,7 @@ public class CrumTreeFile extends CrumMerkleTree implements Channel {
    * {@code ByteBuffer}s compare.
    * </p>
    */
-  public final static RowOrder CRUM_ORDER = new RowOrder() {
+  final static RowOrder CRUM_ORDER = new RowOrder() {
     @Override
     public int compareRows(ByteBuffer rowA, ByteBuffer rowB) {
       return rowA == rowB ? 0 : rowA.compareTo(rowB);
@@ -181,7 +181,7 @@ public class CrumTreeFile extends CrumMerkleTree implements Channel {
    * Returns the crums as a fixed-width, sorted table.
    */
   @SuppressWarnings("resource")
-  public SortedTable crumsTable() {
+  SortedTable crumsTable() {
     try {
       // cloned, so caller can't close this instance's underlying channel
       return new SortedTable(

@@ -4,12 +4,13 @@
 package io.crums.tc.notary;
 
 
-import static io.crums.tc.Constants.*;
+import static io.crums.tc.Constants.HASH_WIDTH;
 import static io.crums.tc.notary.NotaryConstants.CARGO_BLOCK_EXT;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +23,7 @@ import io.crums.tc.ChainParams;
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
+import io.crums.tc.TimeBinner;
 import io.crums.tc.TimeChain;
 import io.crums.tc.except.TimeChainException;
 import io.crums.tc.notary.except.NotaryException;
@@ -31,7 +33,11 @@ import io.crums.util.Strings;
 /**
  * 
  */
-public class CargoChain {
+public class CargoChain implements Channel {
+
+  
+  public final static TimeBinner FINEST_BINNER = TimeBinner.MILLIS_32;
+  public final static int MIN_BINNER_EXP = FINEST_BINNER.binExponent();
   
   
   /**
@@ -49,6 +55,14 @@ public class CargoChain {
         throw new IllegalArgumentException(
             "timechain / settings mismatch: " +
             timechain.params() + " / " + settings.chainParams());
+      if (timechain.params().timeBinner().binExponent() < MIN_BINNER_EXP)
+        throw new IllegalArgumentException(
+            "timechain block duration ambitiously too short: " +
+            timechain.params().timeBinner() + " (exponent: " +
+            timechain.params().timeBinner().binExponent() +
+            "); minimum is " + TimeBinner.forExponent(MIN_BINNER_EXP) +
+            " (exponent: " + MIN_BINNER_EXP + ")");
+      
       Objects.requireNonNull(dir);
       Objects.requireNonNull(log);
       Objects.requireNonNull(blockLog);
@@ -119,6 +133,37 @@ public class CargoChain {
   }
   
   
+  
+  
+  
+  
+  public TimeChain timechain() {
+    return timechain;
+  }
+  
+  
+  
+  public NotarySettings settings() {
+    return settings;
+  }
+  
+  
+  
+  @Override
+  public boolean isOpen() {
+    return timechain.isOpen();
+  }
+
+
+
+  @Override
+  public void close() {
+    timechain.close();
+  }
+
+
+
+
   private final static int CB_EXT_LEN = CARGO_BLOCK_EXT.length();
   
   
@@ -213,7 +258,7 @@ public class CargoChain {
           settings.chainParams().utcForBlockNo(crumBlockNo + 1);
       
       if (blockTimeSkew < 0 &&
-          blockTimeSkew > settings.maxCrossMachineTimeSkew()) {
+          -blockTimeSkew > settings.maxCrossMachineTimeSkew()) {
         
         var error = new AssertionError(
             "Cross-machine time skew detected: block [" + (crumBlockNo + 1) +
@@ -261,6 +306,11 @@ public class CargoChain {
   }
   
   
+  private CargoBlock getBlockIfPresent(long blockNo) {
+    return createNewBlock(blockNo, true);
+  }
+  
+  
   /**
    * Creates and returns a new {@code CargoBlock} instance.
    * 
@@ -298,10 +348,8 @@ public class CargoChain {
     for (int index = blocks.size(); index-- > 0; ) {
       
       CargoBlock  block = blocks.get(index);
-      if (block.blockNo() > commitNo)
-        break;
       
-      var receipt = findReceipt(hash, block);
+      var receipt = findReceipt(hash, block, commitNo);
       if (receipt != null)
         return Optional.of(receipt);
       
@@ -314,47 +362,62 @@ public class CargoChain {
   /**
    * Returns a receipt from the given {@code block}, if any; {@code null}, o.w.
    * 
-   * @param block   block no. &le; {@linkplain TimeChain#blockCount()}
    * @return  {@code null}, if not found
    */
-  private Receipt findReceipt(ByteBuffer hash, CargoBlock block) {
-    CargoProof cargoProof = block.findCargoProof(hash);
-    if (cargoProof != null) {
-      var blockProof = timechain.getBlockProof(block.blockNo());
-      var crumtrail = Crumtrail.newMerkleTrail(blockProof, cargoProof);
-      return new Receipt(crumtrail);
+  private Receipt findReceipt(
+      ByteBuffer hash, CargoBlock block, long commitNo) {
+    
+    if (block.blockNo() <= commitNo) {
       
+      CargoProof cargoProof = block.findCargoProof(hash);
+      if (cargoProof != null) {
+        var blockProof = timechain.getBlockProof(block.blockNo());
+        var crumtrail = Crumtrail.newMerkleTrail(blockProof, cargoProof);
+        return new Receipt(crumtrail);
+        
+      }
+      
+      Crum crum = block.findLoneCommit();
+      if (crum == null)
+        throw new NotaryException(
+            "expected commit file not found cargo block [" + block.blockNo() +
+            "]; chain commit at [" + commitNo + "]");
+      
+      if (crum.hash().equals(hash)) {
+        var blockProof = timechain.getBlockProof(block.blockNo());
+        var crumtrail = Crumtrail.newLoneTrail(blockProof, crum);
+        return new Receipt(crumtrail);
+      }
+      
+      return null;
     }
     
-    Crum crum = block.findLoneCommit();
-    if (crum != null) {
-      var blockProof = timechain.getBlockProof(block.blockNo());
-      var crumtrail = Crumtrail.newLoneTrail(blockProof, crum);
-      return new Receipt(crumtrail);
-    }
-    
-    crum = block.findHexTreeCrum(hash);
+    Crum crum = block.findHexTreeCrum(hash);
     return crum == null ? null : new Receipt(chainParams, crum);
   }
   
   
   
   public Optional<Receipt> findReceipt(Crum hintCrum) {
-    long blockNo = chainParams.blockNoForUtcUnchecked(hintCrum.utc());
+    
+    final long blockNo = chainParams.blockNoForUtcUnchecked(hintCrum.utc());
     if (blockNo <= 0)
       return findReceipt(hintCrum.hash());
     
-    var cargoBlock = createNewBlock(blockNo, false);
-    var hash = hintCrum.hash();
+    final long commitNo = timechain.size();
+    
+    if (blockNo > commitNo)
+      return findReceipt(hintCrum.hash());
+    
+    var cargoBlock = getBlockIfPresent(blockNo);
     if (cargoBlock != null) {
-      var rcpt = findReceipt(hash, cargoBlock);
+      var rcpt = findReceipt(hintCrum.hash(), cargoBlock, commitNo);
       if (rcpt != null)
         return Optional.of(rcpt);
     }
     
-    return findReceipt(hash);
+    return findReceipt(hintCrum.hash());
   }
-  
   
   
   
@@ -378,7 +441,7 @@ public class CargoChain {
   public int build() {
     try {
       // note the current "commit" block no.
-      final long lastBlockNo = timechain.size();
+      final long lastCommitNo = timechain.size();
       
       final long now = System.currentTimeMillis();
       
@@ -389,7 +452,7 @@ public class CargoChain {
         // find the start index..
         final int cindex = Collections.binarySearch(
             Lists.map(bds, BlockDir::blockNo),
-            lastBlockNo);
+            lastCommitNo);
         
         if (cindex < 0) {
           int insertIndex = -1 - cindex;
@@ -397,13 +460,12 @@ public class CargoChain {
             return 0;
           startIndex = insertIndex;
         } else {
-          startIndex = cindex;
+          startIndex = cindex + 1;
         }
         
         // find the end index..
         final long commitMillisPad =
-            settings.blockCommitLag() +
-            3 * settings.maxCrossMachineTimeSkew() / 2;
+            settings.blockCommitLag() + 1;
 
         int iend = bds.size();
         for (int index = iend; index-- > 0; ) { // at least once
@@ -427,9 +489,12 @@ public class CargoChain {
         final int crumsAdded = block.buildCargo();
         tally += crumsAdded;
         var chash = block.cargoHash();
-        assertCargoHashOnBuild(chash, block.blockNo(), crumsAdded);
-        timechain.recordBlockNo(lastBlockNo, chash);
-        
+        final long blockNo = block.blockNo();
+        assertCargoHashOnBuild(chash, blockNo, crumsAdded);
+        timechain.recordBlockNo(blockNo, chash);
+        log.info(
+            "block [" + blockNo + "] committed (" +
+            Strings.nOf(crumsAdded, "crum") + ")");
       }
       
       return tally;
