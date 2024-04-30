@@ -112,18 +112,14 @@ that were witnessed in a fixed span of time.
 
 ## Cargo Data
 
-Ignoring the hashpointers linking the blocks together, each block contains the following
-cargo data:
-
-- A hash of the set of crums witnessed in that block. Recall a crum consists of
+Ignoring the hashpointers linking the blocks together, each block contains the
+*hash of* a set of crums. That single hash is all that's recorded in the time
+chain permanently. Recall a crum consists of
 the submitted hash, and the time it was witnessed (in UTC milliseconds).
 The hash of a single crum is just the hash of the concatenation of these 2 values.
-
-- The number of hashes witnessed in the block. This number determines *how* the
-hash of the set of crums is computed. If greater than one, then the set's hash
-is the root of a Merkle tree with that many items;
-if one, then it's the hash of a single crum;
-and when zero, the hash of the empty set is encoded as a sequence of zeroed bytes.
+If multiple crums are in the block, then the cargo hash is a Merkle root
+of the set's crums; the hash of the empty set, by convention, is encoded as a sequence
+of zeroed bytes.
 
 ## Block Hashpointers
 
@@ -138,22 +134,21 @@ cargo hash with the hash of blocks it "points" to.)
 
 ## Ballpark Calculations
 
-68 bytes per block
+64 bytes per block
 
-    4       # of hashes witnessed in block
     32      cargo hash (hash of witnessed crums)
     32      block hash
     ---
-    68 bytes
+    64 bytes
 
 Minutes in a year: 525,600
 
 If the chain generates a new block every 8 seconds (7 or 8 new blocks per minute),
 it storage overhead per year will be less than
     
-    525,600 x 68 x 8 = 285,926,400 b
+    525,600 x 64 x 8 ~ 269Mb
 
-So less than 280 Mb/yr. Quite reasonable.
+So less than 1/4 Gb/yr. Quite reasonable.
 
 # Witness Proofs (Crumtrails)
 
