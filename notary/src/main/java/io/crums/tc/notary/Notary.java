@@ -167,24 +167,28 @@ public class Notary implements Channel {
       NotaryLog log) {
     
     cargoChainDir = cargoChainDir(cargoChainDir, chain);
-    var bccArgs =
+    var ccArgs =
         new CargoChain.InitArgs(chain, settings, cargoChainDir, log);
     
-    this.cargoChain = new CargoChain(bccArgs);
+    this.cargoChain = newCargoChain(ccArgs);
+  }
+  
+  
+  
+  protected CargoChain newCargoChain(CargoChain.InitArgs ccArgs) {
+    return new CargoChain(ccArgs);
   }
     
   
   
   private File cargoChainDir(File cargoChainDir, TimeChain chain) {
+    if (cargoChainDir != null)
+      return cargoChainDir;
     
     return
-        cargoChainDir == null ?
-            new File(
-                chain.file().getParentFile(),
-                CARGO_DIR)
-            :
-                  
-            cargoChainDir;
+        new File(
+            chain.file().getParentFile(),
+            CARGO_DIR);
   }
   
   
@@ -209,17 +213,13 @@ public class Notary implements Channel {
   
   
   
-  protected TimeChain timechain() {
-    return cargoChain.timechain();
-  }
   
   /**
    * Returns the number of blocks committed to the time chain.
-   * 
-   * @return
+   * AKA, commit-no.
    */
   public long blockCount() {
-    return timechain().size();
+    return cargoChain.timechain().size();
   }
   
   
@@ -234,15 +234,36 @@ public class Notary implements Channel {
   }
 
 
+  /**
+   * Witnesses the given {@code hash} and returns the
+   * receipt.
+   * <p>
+   * First the last {@linkplain NotaryPolicy#blocksSearched() blocks-searched}
+   * number of logical blocks are searched for the hash,
+   * in order of descending block no. If found, a receipt is generated from
+   * an existing crum and returned.
+   * </p><p>
+   * Otherwise, a fresh crum is stored in the block no. indicated by the
+   * crum's utc and returned packaged as a {@code Receipt}.
+   * </p>
+   */
   public Receipt witness(ByteBuffer hash) {
     return cargoChain.findReceipt(hash).orElseGet(
         () -> cargoChain.addCrum(new FreshCrum(hash)));
   }
   
   
+  /**
+   * Returns an updated receipt for the given {@code crum}.
+   * If the crum is not found in its approproriate block
+   * (i.e. the crum was made up and not the return value from
+   * {@link #witness(ByteBuffer)}), or if more than
+   * {@linkplain NotaryPolicy#blocksRetained()} blocks have
+   * since elapsed), then {@code witness(crum.hash())} is returned.
+   */
   public Receipt update(Crum crum) {
-    return cargoChain.findReceipt(crum).orElseGet(
-        () -> cargoChain.addCrum(new FreshCrum(crum.hash())));
+    return cargoChain.findCrumReceipt(crum).orElseGet(
+        () -> witness(crum.hash()));
   }
 
   

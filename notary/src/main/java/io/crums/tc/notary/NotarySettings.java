@@ -18,7 +18,7 @@ import io.crums.util.TidyProperties;
  * be interested (and which therefore might be made public)
  * are gathered in the base class {@linkplain NotaryPolicy}.
  */
-public final class NotarySettings extends NotaryPolicy {
+public class NotarySettings extends NotaryPolicy {
   
   public final static int DEFAULT_MAX_CROSS_MACHINE_TIME_SKEW = 1024;
 
@@ -47,20 +47,6 @@ public final class NotarySettings extends NotaryPolicy {
         DEFAULT_MAX_CROSS_MACHINE_TIME_SKEW;
   }
   
-  
-  /**
-   * Constructs an instance with reasonable defaults.
-   * For args description, see base class constructor 
-   * {@link NotaryPolicy#NotaryPolicy(ChainParams, int, int)}.
-   */
-  public NotarySettings(
-      ChainParams params, int blocksRetained, int blockCommitLag) {
-    super(params, blocksRetained, blockCommitLag);
-    this.maxConcurrentLag = maxConcurrentLag(params);
-    this.maxCrossMachineTimeSkew =
-        DEFAULT_MAX_CROSS_MACHINE_TIME_SKEW;
-  }
-  
   /** Constructs an instance with reasonable defaults. */
   public NotarySettings(NotaryPolicy policy) {
     super(policy);
@@ -70,9 +56,11 @@ public final class NotarySettings extends NotaryPolicy {
   }
   
   /**
+   * Full constructor.
    * 
-   * @param policy            base settings (public)
-   * @param maxConcurrentLag  see {@link #maxConcurrentLag()}
+   * @param policy                  base settings (public)
+   * @param maxConcurrentLag        see {@link #maxConcurrentLag()}
+   * @param maxCrossMachineTimeSkew see {@link #maxCrossMachineTimeSkew()}
    */
   public NotarySettings(
       NotaryPolicy policy,
@@ -97,6 +85,13 @@ public final class NotarySettings extends NotaryPolicy {
   }
   
   
+  protected NotarySettings(NotarySettings copy) {
+    super(copy);
+    this.maxConcurrentLag = copy.maxConcurrentLag;
+    this.maxCrossMachineTimeSkew = copy.maxCrossMachineTimeSkew;
+  }
+  
+  
 
   /**
    * Maximum time (millis) allowed for a newly seen hash to cross certain
@@ -112,15 +107,19 @@ public final class NotarySettings extends NotaryPolicy {
    * is the point of this.)
    * </p>
    */
-  public int maxConcurrentLag() {
+  public final int maxConcurrentLag() {
     return maxConcurrentLag;
   }
 
   /**
-   * Maximum clock skew (millis) across machines. The returned value
-   * is less than {@linkplain #maxConcurrentLag()}.
+   * Maximum clock skew (millis) across machines. Along certain execution
+   * paths, it's possible to discover (we hope not to) objects that were
+   * written ahead of system time. When so (again, hope never to encounter),
+   * the instance that detected the skew attempts to stop the notary
+   * instance by throwing an assertion error. This setting determines
+   * when to panic.
    */
-  public int maxCrossMachineTimeSkew() {
+  public final int maxCrossMachineTimeSkew() {
     return maxCrossMachineTimeSkew;
   }
   
@@ -155,6 +154,9 @@ public final class NotarySettings extends NotaryPolicy {
     public final static String BLOCKS_RETAINED =
         ROOT + "blocksRetained";
     
+    public final static String BLOCKS_SEARCHED =
+        ROOT + "blocksSearched";
+    
     public final static String MAX_CONCURRENT_LAG =
         ROOT + "maxConcurrentLag";
     public final static String MAX_CROSS_MACHINE_TIME_SKEW =
@@ -165,6 +167,7 @@ public final class NotarySettings extends NotaryPolicy {
       return List.of(
           BLOCK_COMMIT_LAG,
           BLOCKS_RETAINED,
+          BLOCKS_SEARCHED,
           MAX_CONCURRENT_LAG,
           MAX_CROSS_MACHINE_TIME_SKEW);
     }
@@ -180,7 +183,7 @@ public final class NotarySettings extends NotaryPolicy {
    * @see #load(Properties, ChainParams)
    */
   public Properties toProperties() {
-    var props = new TidyProperties(PropNames.inOrder());
+    var props = new TidyProperties(orderedPropNames());
 
     props.put(
         PropNames.BLOCK_COMMIT_LAG,
@@ -189,6 +192,9 @@ public final class NotarySettings extends NotaryPolicy {
         PropNames.BLOCKS_RETAINED,
         Integer.toString(blocksRetained()));
     props.put(
+        PropNames.BLOCKS_SEARCHED,
+        Integer.toString(blocksSearched()));
+    props.put(
         PropNames.MAX_CONCURRENT_LAG,
         Integer.toString(maxConcurrentLag()));
     props.put(
@@ -196,6 +202,12 @@ public final class NotarySettings extends NotaryPolicy {
         Integer.toString(maxCrossMachineTimeSkew()));
     
     return props;
+  }
+  
+  
+  
+  protected List<String> orderedPropNames() {
+    return PropNames.inOrder();
   }
   
   
@@ -235,11 +247,12 @@ public final class NotarySettings extends NotaryPolicy {
     
     int blockCommitLag = getIntProperty(props, PropNames.BLOCK_COMMIT_LAG);
     int blocksRetained = getIntProperty(props, PropNames.BLOCKS_RETAINED);
+    int blocksSearched = getIntProperty(props, PropNames.BLOCKS_SEARCHED);
     int maxConcurrentLag = getIntProperty(props, PropNames.MAX_CONCURRENT_LAG);
     int maxCrossMachineTimeSkew =
         getIntProperty(props, PropNames.MAX_CROSS_MACHINE_TIME_SKEW);
     
-    var policy = new NotaryPolicy(chainParams, blocksRetained, blockCommitLag);
+    var policy = new NotaryPolicy(chainParams, blocksRetained, blockCommitLag, blocksSearched);
     return new NotarySettings(
         policy, maxConcurrentLag, maxCrossMachineTimeSkew);
   }

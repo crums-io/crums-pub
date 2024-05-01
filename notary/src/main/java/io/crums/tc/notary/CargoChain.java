@@ -169,7 +169,7 @@ public class CargoChain implements Channel {
   private final static int CB_EXT_LEN = CARGO_BLOCK_EXT.length();
   
   
-  
+  /** Block no., directory name tuple. */
   protected record BlockDir(long blockNo, String dirname)
       implements Comparable<BlockDir> {
     
@@ -177,7 +177,7 @@ public class CargoChain implements Channel {
      * {@code blockNo} is inferred from the {@code dir}
      * name.
      */
-    protected BlockDir(String dirname) throws NumberFormatException {
+    public BlockDir(String dirname) throws NumberFormatException {
       this(
           Long.parseLong(
               dirname.substring(
@@ -281,7 +281,7 @@ public class CargoChain implements Channel {
       
       // alright, we'll use the cargo block 2nd from the 
       // frontier block (whether one exists or not):
-      // remember, the blocks are firstly conceptual (model),
+      // remember, the blocks are firstly conceptual (modeled by block no.),
       // and then secondly, manifested as directories
       
       int count = blocks.size();
@@ -311,7 +311,7 @@ public class CargoChain implements Channel {
   
   
   private CargoBlock createNewBlock(long blockNo) {
-    return createNewBlock(blockNo, false);
+    return getCargoBlock(blockNo, false);
   }
   
   
@@ -319,12 +319,15 @@ public class CargoChain implements Channel {
     
     return
         commitNo - blockNo > settings.blocksRetained() ?
-            null : createNewBlock(blockNo, true);
+            null : getCargoBlock(blockNo, true);
   }
   
   
   /**
-   * Creates and returns a new {@code CargoBlock} instance.
+   * Conditonally creates and returns a new {@code CargoBlock} instance.
+   * If {@code readOnly}, and the underlying cargo block directory does
+   * not exist, then {@code null} is returned. Otherwise, an instance
+   * is always created (the underlying block directory is created on demand).
    * 
    * @param blockNo   &ge; 1
    * @param readOnly  if {@code true}, and the block directory
@@ -332,7 +335,7 @@ public class CargoChain implements Channel {
    *                  
    * @return not {@code null}, if {@code readOnly} is {@code false}
    */
-  protected CargoBlock createNewBlock(long blockNo, boolean readOnly) {
+  protected CargoBlock getCargoBlock(long blockNo, boolean readOnly) {
     File cbDir = blockDirFile(blockNo);
     if (readOnly && !cbDir.exists())
       return null;
@@ -343,32 +346,47 @@ public class CargoChain implements Channel {
   }
   
   
+  
+  /**
+   * Searches for a receipt of the given {@code hash} in the last
+   * {@linkplain NotaryPolicy#blocksSearched() blocks-searched}
+   * number of (logical) cargo blocks. The search is performed
+   * in reverse order of block no. The highest block no.
+   * searched is discovered from the existing directories on the
+   * file system; the descending block no.s that follow on the
+   * search path, are determined by block no. (the logical block),
+   * not by existing cargo directories (whose block no.s may contain
+   * gaps.)
+   */
   public Optional<Receipt> findReceipt(ByteBuffer hash) {
     
     if (hash.remaining() != HASH_WIDTH)
       throw new IllegalArgumentException("wrong hash width: " + hash);
     
-    return findReceipt(hash, activeBlocksLazy());
-  }
-  
-  
-  private Optional<Receipt> findReceipt(
-      ByteBuffer hash, List<CargoBlock> blocks) {
+    var activeDirs = activeBlockDirs();
+    final int size = activeDirs.size();
+    if (size == 0)
+      return Optional.empty();
     
+    final long stopCbNo =
+        activeDirs.get(size - 1).blockNo() - settings.blocksSearched();
     final long commitNo = timechain.size();
     
-    for (int index = blocks.size(); index-- > 0; ) {
-      
-      CargoBlock  block = blocks.get(index);
-      
+    for (int index = size; index-- > 0; ) {
+      var bd = activeDirs.get(index);
+      if (bd.blockNo() == stopCbNo)
+        break;
+      var block = toCargoBlock(bd);
       var receipt = findReceipt(hash, block, commitNo);
       if (receipt != null)
         return Optional.of(receipt);
-      
-    } // for
+    }
+    
     
     return Optional.empty();
   }
+  
+ 
   
   
   /**
@@ -403,9 +421,12 @@ public class CargoChain implements Channel {
         return null;
       case UNBUILT:
 
-        throw new NotaryException(
+        var error = new AssertionError(
             "expected commit file not found cargo block [" + block.blockNo() +
             "]; chain commit at [" + commitNo + "]");
+        
+        log.fatal(error);
+        throw error;
       }
       
     }
@@ -416,25 +437,34 @@ public class CargoChain implements Channel {
   
   
   
-  public Optional<Receipt> findReceipt(Crum hintCrum) {
+  /**
+   * Finds and returns the receipt for the given {@code crum}.
+   * If the given crum is indeed recorded in its appropriate
+   * block (determined by the crum's {@linkplain Crum#utc() utc})
+   * and if the block is still retained
+   * ({@linkplain NotaryPolicy#blocksRetained()}), then a
+   * receipt shall be found; otherwise, "empty" is returned.
+   * <p>
+   * This method searches at most one cargo block.
+   * </p>
+   */
+  public Optional<Receipt> findCrumReceipt(Crum crum) {
     
-    final long blockNo = chainParams.blockNoForUtcUnchecked(hintCrum.utc());
+    final long blockNo = chainParams.blockNoForUtcUnchecked(crum.utc());
     if (blockNo <= 0)
-      return findReceipt(hintCrum.hash());
+      return Optional.empty();
     
     final long commitNo = timechain.size();
     
-    if (blockNo > commitNo)
-      return findReceipt(hintCrum.hash());
     
     var cargoBlock = getBlockIfPresent(blockNo, commitNo);
     if (cargoBlock != null) {
-      var rcpt = findReceipt(hintCrum.hash(), cargoBlock, commitNo);
+      var rcpt = findReceipt(crum.hash(), cargoBlock, commitNo);
       if (rcpt != null)
         return Optional.of(rcpt);
     }
-    
-    return findReceipt(hintCrum.hash());
+
+    return Optional.empty();
   }
   
   
@@ -443,16 +473,6 @@ public class CargoChain implements Channel {
   
   
   
-  public List<CargoBlock> activeBlocks() {
-    var blockDirs = activeBlockDirs();
-    final int count = blockDirs.size();
-    var array = new CargoBlock[count];
-    for (int index = count; index-- > 0; ) {
-      var bDir = blockDirs.get(index);
-      array[index] = toCargoBlock(bDir);
-    }
-    return Lists.asReadOnlyList(array);
-  }
   
   
   

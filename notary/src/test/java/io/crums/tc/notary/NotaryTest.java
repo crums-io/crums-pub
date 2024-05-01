@@ -60,8 +60,8 @@ public class NotaryTest extends IoTestCase {
     
     assertTrue(notary.isOpen());
     assertEquals(0L, notary.blockCount());
-    out.println("time chain file: " + notary.timechain().file());
-    out.println("chain params: " + notary.timechain().params());
+    out.println("time chain file: " + notary.cargoChain.timechain().file());
+    out.println("chain params: " + notary.cargoChain.timechain().params());
     
     notary.close();
     assertFalse(notary.isOpen());
@@ -102,7 +102,7 @@ public class NotaryTest extends IoTestCase {
           blocksRetained);
     
     
-    out.println("chain params:   " + notary.timechain().params());
+    out.println("chain params:   " + notary.cargoChain.timechain().params());
     
     byte[] rhash = new byte[Constants.HASH_WIDTH];
     random.nextBytes(rhash);
@@ -170,7 +170,7 @@ public class NotaryTest extends IoTestCase {
           blocksRetained);
     
     
-    out.println("chain params:   " + notary.timechain().params());
+    out.println("chain params:   " + notary.cargoChain.timechain().params());
     
     byte[] rhash = new byte[Constants.HASH_WIDTH];
     random.nextBytes(rhash);
@@ -241,7 +241,7 @@ public class NotaryTest extends IoTestCase {
       receipts.add(rcpt);
     }
     
-    out.println("chain params:   " + notary.timechain().params());
+    out.println("chain params:   " + notary.cargoChain.timechain().params());
     notary.close();
     
     notary = Notary.load(dir);
@@ -303,7 +303,7 @@ public class NotaryTest extends IoTestCase {
     }
     
     
-    out.println("chain params:   " + notary.timechain().params());
+    out.println("chain params:   " + notary.cargoChain.timechain().params());
     
     Thread.sleep(4 * binner.duration());
     assertEquals(0L, notary.blockCount());
@@ -355,7 +355,7 @@ public class NotaryTest extends IoTestCase {
           startUtc,
           blocksRetained);
 
-    out.println("chain params:   " + notary.timechain().params());
+    out.println("chain params:   " + notary.cargoChain.timechain().params());
     
     var rcpt = notary.witness(wHashes.get(0).slice());
     
@@ -419,13 +419,15 @@ public class NotaryTest extends IoTestCase {
           startUtc,
           blocksRetained);
     
+    // collect the receipts quickly, check'em after..
+    
     List<Receipt> receipts = new ArrayList<>();
     for (int index = 0; index < crumCount; ++index) {
       var rcpt = notary.witness(wHashes.get(index).slice());
       receipts.add(rcpt);
     }
     
-    
+    // check the receipts..
     long lastUtc = 0;
     for (int index = 0; index < crumCount; ++index) {
       var rcpt = receipts.get(index);
@@ -436,7 +438,7 @@ public class NotaryTest extends IoTestCase {
     }
     
     
-    out.println("chain params:   " + notary.timechain().params());
+    out.println("chain params:   " + notary.cargoChain.timechain().params());
     
     long lastBlockUtcEnd =
         binner.binTime(lastUtc) + binner.duration();
@@ -475,7 +477,7 @@ public class NotaryTest extends IoTestCase {
     out.println("sample trail..");
     print(r500.trail());
     
-    // test purgeInactiveBlocks
+    out.println("testing purgeInactiveBlocks()..");
     
     var bds = notary.cargoChain.sortedBlockDirs();
     final long firstBlockNo = bds.get(0).blockNo();

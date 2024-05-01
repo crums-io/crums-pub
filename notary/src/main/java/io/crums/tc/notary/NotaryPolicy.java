@@ -7,11 +7,14 @@ package io.crums.tc.notary;
 import io.crums.tc.ChainParams;
 
 /**
- * Notary settings an end user might be interested in.
+ * Notary settings that concern an end user. 
  * 
  * @see NotarySettings
  */
 public class NotaryPolicy {
+  
+  
+  public final static int DEFAULT_BLOCKS_SEARCHED = 3;
 
   
   public final static int MIN_BLOCKS_RETAINED = 3;
@@ -26,20 +29,39 @@ public class NotaryPolicy {
   
   private final int blockCommitLag;
   
+  private final int blocksSearched;
   
   
+  /**
+   * Constructs an instance with reasonable defaults.
+   * 
+   * @see #NotaryPolicy(ChainParams, int, int, int) full constructor
+   */
   public NotaryPolicy(ChainParams params, int blocksRetained) {
     this(
-        params, blocksRetained,
-        Math.max((int) params.blockDuration() / 2, MIN_BLOCK_COMMIT_LAG));
+        params,
+        blocksRetained,
+        Math.max((int) params.blockDuration() / 2, MIN_BLOCK_COMMIT_LAG),
+        DEFAULT_BLOCKS_SEARCHED);
   }
   
 
+  
+  /**
+   * Full constructor.
+   * 
+   * @param params          see {@linkplain #chainParams()}
+   * @param blocksRetained  see {@linkplain #blocksRetained()}
+   * @param blockCommitLag  see {@linkplain #blockCommitLag()}
+   * @param blocksSearched  see {@linkplain #blocksSearched()}
+   */
   public NotaryPolicy(
-      ChainParams params, int blocksRetained, int blockCommitLag) {
+      ChainParams params,
+      int blocksRetained, int blockCommitLag, int blocksSearched) {
     this.params = params; // (null checked below)
     this.blocksRetained = blocksRetained;
     this.blockCommitLag = blockCommitLag;
+    this.blocksSearched = blocksSearched;
     
     if (blocksRetained < MIN_BLOCKS_RETAINED)
       throw new IllegalArgumentException(
@@ -59,6 +81,9 @@ public class NotaryPolicy {
           "blockCommitLag (" + blockCommitLag +
           ")  too large for given blocksRetained (" +
           blocksRetained + ") and binner " + params.timeBinner());
+    
+    if (blocksSearched < 0)
+      throw new IllegalArgumentException("blocksSearched: " + blocksSearched);
           
   }
   
@@ -68,16 +93,23 @@ public class NotaryPolicy {
     this.params = policy.params;
     this.blocksRetained = policy.blocksRetained;
     this.blockCommitLag = policy.blockCommitLag;
+    this.blocksSearched = policy.blocksSearched;
   }
 
   
 
+  /**
+   * Time chain block boundaries, and 1st block UTC.
+   */
   public final ChainParams chainParams() {
     return params;
   }
   
   
-  
+  /**
+   * Number of cargo blocks retained after the last committed block.
+   * @return &ge; {@linkplain #MIN_BLOCKS_RETAINED}
+   */
   public final int blocksRetained() {
     return blocksRetained;
   }
@@ -96,13 +128,33 @@ public class NotaryPolicy {
   
   
   
-  
+  /**
+   * Number of logical blocks searched on witnessing a new hash.
+   * When a user submits a hash to be
+   * {@linkplain Notary#witness(java.nio.ByteBuffer) witness}ed,
+   * the notary looks back thru a fixed number (<em>this no.</em>)
+   * of recent cargo blocks to check whether it has already seen
+   * the hash.
+   * <p>
+   * Note, <em>logical block</em> here is just a block no.: there may
+   * or may not exist a cargo block (directory) for that block no.
+   * </p>
+   * 
+   * @return &ge; 0 (zero means no blocks are searched)
+   */
+  public final int blocksSearched() {
+    return blocksSearched;
+  }
+
+
+
   /** Equality sans {@code Object.equals(..)} formalities. */
   public final boolean equalPolicy(NotaryPolicy other) {
     return
         params.equalParams(other.params) &&
         blockCommitLag == other.blockCommitLag &&
-        blocksRetained == other.blocksRetained;
+        blocksRetained == other.blocksRetained &&
+        blocksSearched == other.blocksSearched;
   }
   
   
