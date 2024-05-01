@@ -157,7 +157,7 @@ public class Notary implements Channel {
    * @param chain         the time chain
    * @param settings      its chain-params must match that of {@code chain}
    * @param cargoChainDir if {@code null} then the default diretory named 
-   *                      {@linkplain NotaryConstants#CARGO_DIR CARGO is
+   *                      {@linkplain NotaryConstants#CARGO_DIR CARGO} is
    *                      chosen
    * @param log           not {@code null}
    */
