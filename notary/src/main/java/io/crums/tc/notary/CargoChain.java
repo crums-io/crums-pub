@@ -6,6 +6,7 @@ package io.crums.tc.notary;
 
 import static io.crums.tc.Constants.HASH_WIDTH;
 import static io.crums.tc.notary.NotaryConstants.CARGO_BLOCK_EXT;
+import static io.crums.tc.notary.NotaryConstants.GRAVEYARD_DIR;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.crums.io.DirectoryRemover;
 import io.crums.io.FileUtils;
 import io.crums.tc.CargoProof;
 import io.crums.tc.ChainParams;
@@ -211,6 +213,7 @@ public class CargoChain implements Channel {
     
 
     final CargoBlock last = blocks.get(blocks.size() - 1);
+    
     final long diff = crumBlockNo - last.blockNo();
     
     if (diff == 0)
@@ -260,6 +263,12 @@ public class CargoChain implements Channel {
       if (blockTimeSkew < 0 &&
           -blockTimeSkew > settings.maxCrossMachineTimeSkew()) {
         
+        // NOTE: do realize we might be killing a good daemon
+        // with the clock leader being the bad one, leaving
+        // all good fellows dead and only the bad one alive.
+        // (Since we can't kill the bad process from here,
+        // the best we can do is not participate)
+        
         var error = new AssertionError(
             "Cross-machine time skew detected: block [" + (crumBlockNo + 1) +
             "] is ahead of local system time by " + blockTimeSkew +
@@ -306,8 +315,11 @@ public class CargoChain implements Channel {
   }
   
   
-  private CargoBlock getBlockIfPresent(long blockNo) {
-    return createNewBlock(blockNo, true);
+  private CargoBlock getBlockIfPresent(long blockNo, long commitNo) {
+    
+    return
+        commitNo - blockNo > settings.blocksRetained() ?
+            null : createNewBlock(blockNo, true);
   }
   
   
@@ -369,27 +381,33 @@ public class CargoChain implements Channel {
     
     if (block.blockNo() <= commitNo) {
       
-      CargoProof cargoProof = block.findCargoProof(hash);
-      if (cargoProof != null) {
-        var blockProof = timechain.getBlockProof(block.blockNo());
-        var crumtrail = Crumtrail.newMerkleTrail(blockProof, cargoProof);
-        return new Receipt(crumtrail);
-        
-      }
-      
-      Crum crum = block.findLoneCommit();
-      if (crum == null)
+      switch (block.state()) {
+      case MRKL:
+        {
+          CargoProof cargoProof = block.findCargoProof(hash);
+          if (cargoProof != null) {
+            var blockProof = timechain.getBlockProof(block.blockNo());
+            var crumtrail = Crumtrail.newMerkleTrail(blockProof, cargoProof);
+            return new Receipt(crumtrail);
+            
+          }
+          return null;
+        }
+      case LONE:
+        Crum crum = block.findLoneCommit();
+        if (crum.hash().equals(hash)) {
+          var blockProof = timechain.getBlockProof(block.blockNo());
+          var crumtrail = Crumtrail.newLoneTrail(blockProof, crum);
+          return new Receipt(crumtrail);
+        }
+        return null;
+      case UNBUILT:
+
         throw new NotaryException(
             "expected commit file not found cargo block [" + block.blockNo() +
             "]; chain commit at [" + commitNo + "]");
-      
-      if (crum.hash().equals(hash)) {
-        var blockProof = timechain.getBlockProof(block.blockNo());
-        var crumtrail = Crumtrail.newLoneTrail(blockProof, crum);
-        return new Receipt(crumtrail);
       }
       
-      return null;
     }
     
     Crum crum = block.findHexTreeCrum(hash);
@@ -409,7 +427,7 @@ public class CargoChain implements Channel {
     if (blockNo > commitNo)
       return findReceipt(hintCrum.hash());
     
-    var cargoBlock = getBlockIfPresent(blockNo);
+    var cargoBlock = getBlockIfPresent(blockNo, commitNo);
     if (cargoBlock != null) {
       var rcpt = findReceipt(hintCrum.hash(), cargoBlock, commitNo);
       if (rcpt != null)
@@ -434,6 +452,109 @@ public class CargoChain implements Channel {
       array[index] = toCargoBlock(bDir);
     }
     return Lists.asReadOnlyList(array);
+  }
+  
+  
+  
+  public final static int GRACE_BLOCKS = 1;
+  
+  /**
+   * Purges the inactive blocks and returns the number
+   * of blocks purged.
+   * 
+   * @return count of blocks purged
+   */
+  public int purgeInactiveBlocks() {
+    
+    final long commitNo = timechain.size();
+    final long lastPurgableNo =
+        commitNo - settings.blocksRetained() - GRACE_BLOCKS;
+    
+    if (lastPurgableNo <= 0)
+      return 0;
+    
+    var all = sortedBlockDirs();
+    
+    if (all.isEmpty()) {
+      log.warning("no cargo block directories; commit no.: " + commitNo);
+      return 0;
+    }
+    
+    
+    final int indexOfLastPurgable; // (inc)
+    {
+      int index =
+          Collections.binarySearch(
+              Lists.map(all, BlockDir::blockNo),
+              lastPurgableNo);
+      if (index >= 0)
+        indexOfLastPurgable = index;
+      else {
+        // (redundant arithmetic, but to be clear..)
+        int insertIndex = -1 - index;
+        indexOfLastPurgable = insertIndex - 1;
+        if (indexOfLastPurgable == -1)
+          return 0;
+      }
+      
+      assert indexOfLastPurgable >= 0;
+    }
+    
+    var purgableBlockDirs = all.subList(0, indexOfLastPurgable + 1);
+    
+    File graveyard = new File(dir, GRAVEYARD_DIR);
+    FileUtils.ensureDir(graveyard);
+    
+    int tally = 0;
+    int errors = 0;
+    for (var bd : purgableBlockDirs) {
+      File plot = new File(graveyard, bd.dirname());
+      File deadDir = bd.toFile(dir);
+      boolean moved = deadDir.renameTo(plot);
+      if (!moved) {
+        var msg =
+            "[RACE]: purge failed to move cargo block [" + bd.blockNo() +
+            "] to graveyard in possible race: ";
+        
+        if (deadDir.exists())
+          msg += "block still exists; ";
+        else
+          msg += "block no longer exists; ";
+
+        boolean plotExists = plot.exists();
+        if (plotExists) {
+          msg += "plot exists (proceeding with purge)";
+        } else
+          msg += "plot does not exist";
+        log.warning(msg);
+        
+        if (!plotExists) {
+          ++errors;
+          continue;
+        }
+      }
+      int rmCount = DirectoryRemover.removeTree(plot);
+      if (rmCount < 0) {
+        log.warning(
+            "[RACE]: failed to complete purge of cargo block dir [" + bd.blockNo() +
+            "]; " + Strings.nOf(-rmCount, "object") + " removed");
+        ++errors;
+      } else {
+        ++tally;
+        log.info(
+            "[PURGE]: cargo block [" + bd.blockNo() + "] removed (" +
+            Strings.nOf(rmCount, "object") + ")");
+      }
+    }
+    
+
+    
+    log.info(
+        "[PURGE]: " + Strings.nOf(tally, "block") + " removed; " +
+        Strings.nOf(errors, "error"));
+    
+    
+    return tally;
   }
   
   
@@ -483,6 +604,12 @@ public class CargoChain implements Channel {
         return 0;
       
       var buildDirs = bds.subList(startIndex, endIndex);
+      if (buildDirs.size() >= settings.blocksRetained()) {
+        log.warning(
+            "unbuilt cargo block queue length (" + buildDirs.size() +
+            " blocks) is breaching blocks-retained setting (" +
+            settings.blocksRetained() + ")");
+      }
       int tally = 0;
       for (var bd : buildDirs) {
         var block = toCargoBlock(bd);
@@ -570,6 +697,8 @@ public class CargoChain implements Channel {
    */
   protected final List<BlockDir> sortedBlockDirs() throws NumberFormatException {
     String[] cds = listCargoDirNames();
+    if (cds.length == 0)
+      return List.of();
     BlockDir[] bds = new BlockDir[cds.length];
     for (int index = cds.length; index-- > 0; )
       bds[index] = new BlockDir(cds[index]);
@@ -580,15 +709,55 @@ public class CargoChain implements Channel {
   
   /**
    * Returns the tail end of the {@link #sortedBlockDirs()} list,
-   * no greater in size than the {@link NotaryPolicy#blocksRetained()}
-   * setting.
+   * such that the first block no. in the returned sublist, is
+   * greater than {@code timechain.size() - settings.blocksRetained()}.
+   * (Cargo blocks numbered at or below that cutoff no. are eligible
+   * for purge.)
    */
   protected final List<BlockDir> activeBlockDirs() {
+    
+    final long commitNo = timechain.size();
     var all = sortedBlockDirs();
-    int size = all.size();
-    int maxBlocks = settings.blocksRetained();
-    return size > maxBlocks ?
-        all.subList(size - maxBlocks, size) : all;
+    
+    
+    // note the block no. cutoff: no blocks at or below
+    // this no. are considered active
+    final long blockNoCutoff = commitNo - settings.blocksRetained();
+    if (blockNoCutoff <= 0)
+      return all;
+    
+    // no blocks at or below this index are active
+    final int cutoffIndex;
+    {
+      int index =
+          Collections.binarySearch(
+              Lists.map(all, BlockDir::blockNo),
+              blockNoCutoff);
+      if (index < 0) {
+        int insertIndex = -1 - index;
+        if (insertIndex == 0)
+          return all;
+        // set to one below the insertion point
+        cutoffIndex = insertIndex - 1;
+      } else
+        cutoffIndex = index;
+    }
+
+    final int startIndex = cutoffIndex + 1;
+    final int size = all.size();
+    
+    if (startIndex == size) {
+      throw new AssertionError(
+          "commitNo: " + commitNo + "\n" +
+          "blocksRetained: " + settings.blocksRetained() + "\n" +
+          "blockNoCutoff:  " + blockNoCutoff + "\n" +
+          "cutoffIndex:    " + cutoffIndex + "\n" +
+          "block no.s:     " + Lists.map(all, BlockDir::blockNo)
+          );
+    }
+    
+    
+    return all.subList(startIndex, size);
   }
   
   

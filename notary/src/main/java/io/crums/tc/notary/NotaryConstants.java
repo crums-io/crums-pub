@@ -25,6 +25,10 @@ public class NotaryConstants {
   public final static String CHAIN = "CHAIN" + TIME_CHAIN_EXT;
   /** Cargo directory  */
   public final static String CARGO_DIR = "CARGO";
+  /** Cargo directory  */
+  public final static String GRAVEYARD_DIR = "graveyard";
+  
+  
 //  public final static String CARGO_CHAIN_EXT = ".ccc";
   public final static String CARGO_BLOCK_EXT = ".cb";
   /** Crum filename extension. Includes dot. */

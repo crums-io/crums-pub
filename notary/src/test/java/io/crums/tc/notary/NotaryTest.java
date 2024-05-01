@@ -393,7 +393,7 @@ public class NotaryTest extends IoTestCase {
     final Object label = new Object() { };
     final TimeBinner binner = TimeBinner.MILLIS_64;
     final long startUtc = System.currentTimeMillis();
-    final int blocksRetained = 12;
+    final int blocksRetained = 100;
     final Random random = new Random(210L);
     final int crumCount = 1000;
 
@@ -441,7 +441,7 @@ public class NotaryTest extends IoTestCase {
     long lastBlockUtcEnd =
         binner.binTime(lastUtc) + binner.duration();
     
-    long commitSlack = 3 * binner.duration();
+    final long commitSlack = 3 * binner.duration();
     
     final long targetCommitUtc = lastBlockUtcEnd + commitSlack;
     
@@ -474,6 +474,44 @@ public class NotaryTest extends IoTestCase {
     
     out.println("sample trail..");
     print(r500.trail());
+    
+    // test purgeInactiveBlocks
+    
+    var bds = notary.cargoChain.sortedBlockDirs();
+    final long firstBlockNo = bds.get(0).blockNo();
+    
+    final long targetCommitNo =
+        firstBlockNo +
+        notary.settings().blocksRetained() +
+        CargoChain.GRACE_BLOCKS + 1;
+    
+    var params = notary.chainParams();
+    while (
+        params.blockNoForUtc(System.currentTimeMillis()) <
+        targetCommitNo) {
+      Thread.sleep(params.blockDuration());
+    }
+    
+    {
+      byte[] whash = new byte[Constants.HASH_WIDTH];
+      random.nextBytes(whash);
+      notary.witness(ByteBuffer.wrap(whash));
+      Thread.sleep(commitSlack);
+    }
+    
+    int count = notary.cargoChain.build();
+    assertTrue(count > 0);
+    
+    var stale = receipts.get(0);
+    var uStale = notary.update(stale.crum());
+    assertFalse(uStale.hasTrail());
+    assertTrue(uStale.crum().utc() > stale.crum().utc());
+    
+    
+    
+    int blocksPurged = notary.cargoChain.purgeInactiveBlocks();
+    assertTrue(blocksPurged > 0);
+    
     notary.close();
   }
   

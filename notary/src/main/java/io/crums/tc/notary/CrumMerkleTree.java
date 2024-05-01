@@ -62,6 +62,10 @@ public abstract class CrumMerkleTree extends Tree {
   }
   
   
+  /**
+   * Returns the proof for the given hash, if found;
+   * {@code null}, otherwise.
+   */
   public CargoProof findProof(ByteBuffer hash) {
     List<Crum> crums = crums();
     var hashes = Lists.map(crums, c -> c.hash());

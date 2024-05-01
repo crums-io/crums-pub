@@ -35,6 +35,20 @@ import io.crums.util.TaskStack;
 public class CargoBlock {
   
   /**
+   * State of an instance.
+   * 
+   * @see CargoBlock#state()
+   */
+  public enum State {
+    /** Not built. */
+    UNBUILT,
+    /** Single crum makes cargo hash: whash file exists. */
+    LONE,
+    /** Merkle tree root makes cargo hash: mrkl file exists. */
+    MRKL,
+  }
+  
+  /**
    * {@linkplain CargoBlock} constructor args.
    */
   public record InitArgs(
@@ -95,6 +109,21 @@ public class CargoBlock {
     }
     this.crumsHexTree = new HexPathTree(dir, CRUM_EXT);
     this.log = args.log();
+  }
+  
+  
+  
+  /**
+   * Returns the state of the instance.
+   * Instances transition from {@linkplain State#UNBUILT UNBUILT} to
+   * one of {@linkplain State#MRKL MRKL} or {@linkplain State#LONE LONE}.
+   */
+  public State state() {
+    if (mrklFile().exists())
+      return State.MRKL;
+    if (whashFile().exists())
+      return State.LONE;
+    return State.UNBUILT;
   }
   
   
