@@ -311,7 +311,7 @@ public class TimeChain extends SkipLedger implements Channel {
    * @param utc         the block no. is inferred from this
    * @param cargoHash   the hash of the set of crums witnessed
    * 
-   * @return the number of empty blocks added
+   * @return the number of blocks added
    * @see #recordBlockNo(long, ByteBuffer)
    */
   public long recordBlockForUtc(long utc, ByteBuffer cargoHash)
@@ -341,6 +341,11 @@ public class TimeChain extends SkipLedger implements Channel {
    * more error prone for the user that simply using
    * a "representative" UTC in lieu of a block no.
    * 
+   * 
+   * @param cargoHash   the hash of the set of crums witnessed
+   * 
+   * @return the number of blocks added
+   * 
    * @see #recordBlockForUtc(long, ByteBuffer)
    */
   public long recordBlockNo(
@@ -350,9 +355,19 @@ public class TimeChain extends SkipLedger implements Channel {
     
     final long blockCount = blockCount();
     
-    if (blockNo <= blockCount)
-      throw new IllegalStateException(
-          "cannot overwrite block no. " + blockNo );
+    if (blockNo <= blockCount) {
+      // we have a race.. another thread/process beat us to it
+      // that's ok, but before bailing, verify
+      // the 2 writers (us and them) are in agreement
+      
+      var block = getBlock(blockNo);
+      if (!block.cargoHash().equals(cargoHash)) {
+        throw new IllegalArgumentException(
+            "attempt to overwrite committed cargo hash in block [" +
+            blockNo + "]");
+      }
+      return blockNo - blockCount;
+    }
     
 
     for (long zBlockNo = blockCount; ++zBlockNo < blockNo; )
@@ -430,6 +445,14 @@ public class TimeChain extends SkipLedger implements Channel {
   
   
   
+  /**
+   * Returns the block at the specified no.
+   * 
+   * @param blockNo 1 &le; {@code blockNo} &le; {@linkplain #blockCount()}
+   * @return
+   * @throws IllegalArgumentException
+   *         if {@code blockNo} is out-of-bounds
+   */
   public SkipBlock getBlock(long blockNo) throws IOException {
     checkRealRowNumber(blockNo);
     Objects.checkIndex(blockNo - 1, blockCount());
