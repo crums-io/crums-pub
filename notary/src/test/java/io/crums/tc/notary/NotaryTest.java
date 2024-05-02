@@ -180,7 +180,7 @@ public class NotaryTest extends IoTestCase {
     out.println("witnessed hash: " + IntegralStrings.toHex(rhash));
     assertEquals(hash, crum.hash());
     Thread.sleep(3 * binner.duration());
-    int crumsAdded = notary.cargoChain.build();
+    int crumsAdded = notary.cargoChain.buildAndCommit();
     assertEquals(1, crumsAdded);
     assertTrue(notary.blockCount() > 0);
     
@@ -307,7 +307,7 @@ public class NotaryTest extends IoTestCase {
     
     Thread.sleep(4 * binner.duration());
     assertEquals(0L, notary.blockCount());
-    int crumsCommitted = notary.cargoChain.build();
+    int crumsCommitted = notary.cargoChain.buildAndCommit();
     assertTrue(notary.blockCount() > 0);
     assertEquals(crumCount, crumsCommitted);
     
@@ -361,7 +361,7 @@ public class NotaryTest extends IoTestCase {
     
     Thread.sleep(3 * binner.duration());
     
-    int crumsCommitted = notary.cargoChain.build();
+    int crumsCommitted = notary.cargoChain.buildAndCommit();
     assertEquals(1, crumsCommitted);
     
     rcpt = notary.update(rcpt.crum());
@@ -372,7 +372,7 @@ public class NotaryTest extends IoTestCase {
     
     Thread.sleep(3 * binner.duration());
     
-    crumsCommitted = notary.cargoChain.build();
+    crumsCommitted = notary.cargoChain.buildAndCommit();
     assertEquals(1, crumsCommitted);
     
     rcpt2 = notary.update(rcpt2.crum());
@@ -452,7 +452,7 @@ public class NotaryTest extends IoTestCase {
     if (now < targetCommitUtc)
       Thread.sleep(targetCommitUtc - now);
     assertEquals(0L, notary.blockCount());
-    int crumsCommitted = notary.cargoChain.build();
+    int crumsCommitted = notary.cargoChain.buildAndCommit();
     assertTrue(notary.blockCount() > 0);
     assertEquals(crumCount, crumsCommitted);
     
@@ -501,7 +501,7 @@ public class NotaryTest extends IoTestCase {
       Thread.sleep(commitSlack);
     }
     
-    int count = notary.cargoChain.build();
+    int count = notary.cargoChain.buildAndCommit();
     assertTrue(count > 0);
     
     var stale = receipts.get(0);

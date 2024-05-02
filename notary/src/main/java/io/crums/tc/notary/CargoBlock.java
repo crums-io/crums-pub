@@ -45,7 +45,12 @@ public class CargoBlock {
     /** Single crum makes cargo hash: whash file exists. */
     LONE,
     /** Merkle tree root makes cargo hash: mrkl file exists. */
-    MRKL,
+    MRKL;
+    
+    
+    public boolean isBuilt() {
+      return this != UNBUILT;
+    }
   }
   
   /**
@@ -133,7 +138,7 @@ public class CargoBlock {
    * it has no crums in it--for whatever reason), zero is
    * returned.
    */
-  public int buildCargo() throws NotaryException {
+  public CargoHash buildCargo() throws NotaryException {
     
     // verify the policy block-commit lag
     {
@@ -151,10 +156,11 @@ public class CargoBlock {
         throw nx;
       }        
     }
+    
+    // if the block is already built return cargo hash
+    if (state().isBuilt())
+      return cargoHash();
 
-    // if the block is already committed, don't do anything
-    if (isCommitted())
-      return 0;
     
     // prepare a merkle tree builder and add all the crums in this
     // [cargo] block
@@ -164,16 +170,23 @@ public class CargoBlock {
     final int cc = builder.count();
     
     // if there are one or zero crums, then write the whash file, instead
-    if (cc < 2)
-      return writeWhash(builder.first()) ? cc : 0;
+    if (cc < 2) {
+      var crum = builder.first();
+      boolean race = !writeWhash(crum);
+      // TODO log info if true
+      return crum == null ? CargoHash.EMPTY : new CargoHash(crum.witnessHash(), 1);
+    }
     
     // o.w. build the merkle tree to staged file, then move it..
     
     var staged = newStagedFile(MRKL, "." + MRKL);
-    builder.buildToTarget(staged);
+    var merkleRoot = builder.buildToTarget(staged);
+    
+    boolean race = !moveStaged(staged, mrklFile());
+    // TODO log info if true
     
     
-    return moveStaged(staged, mrklFile()) ? cc : 0;
+    return new CargoHash(merkleRoot, cc);
   }
   
   
@@ -489,42 +502,58 @@ public class CargoBlock {
   }
   
   
+  public int crumsBuilt() {
+    
+    try (var closer = new TaskStack()) {
+      
+      return 0;
+    } catch (TimeChainException tcx) {
+      throw tcx;
+    } catch (Exception x) {
+      
+      var nx = new NotaryException(
+          "on reading cargo hash [" + blockNo +
+          "], detail: " + x.getMessage(), x);
+      
+      log.fatal(nx);
+      throw nx;
+    }
+  }
   
   
   
-  
-  public ByteBuffer cargoHash() {
+  public CargoHash cargoHash() {
     
     try (var closer = new TaskStack()) {
 
-      File mrklFile = mrklFile();
-      if (mrklFile.exists()) {
-        var tree = new CrumTreeFile(mrklFile);
-        closer.pushClose(tree);
-        return ByteBuffer.wrap(tree.hash());
-      }
-      
-      File whashFile = whashFile();
-      if (!whashFile.exists())
-        return null;
-      
-      long len = whashFile.length();
-      if (len == WHASH_LEN) {
-        var buf = FileUtils.loadFileToMemory(whashFile);
-        return buf.limit(Constants.HASH_WIDTH);
-        
-      } else if (len == Constants.HASH_WIDTH) {
-        log.warning(
-            "ignoring empty cargo block [" + blockNo + "]");
-      } else {
-        log.warning(
-            "cargo block [" + blockNo + "] " + WHASH +
-            " file is wrong length (" + len +
-            "); treating as if empty");
-      }
-      return Constants.DIGEST.sentinelHash();
+//      File mrklFile = mrklFile();
+//      if (mrklFile.exists()) {
+//        var tree = new CrumTreeFile(mrklFile);
+//        closer.pushClose(tree);
+//        return ByteBuffer.wrap(tree.hash());
+//      }
+//      
+//      File whashFile = whashFile();
+//      if (!whashFile.exists())
+//        return null;
+//      
+//      long len = whashFile.length();
+//      if (len == WHASH_LEN) {
+//        var buf = FileUtils.loadFileToMemory(whashFile);
+//        return buf.limit(Constants.HASH_WIDTH);
+//        
+//      } else if (len == Constants.HASH_WIDTH) {
+//        log.warning(
+//            "ignoring empty cargo block [" + blockNo + "]");
+//      } else {
+//        log.warning(
+//            "cargo block [" + blockNo + "] " + WHASH +
+//            " file is wrong length (" + len +
+//            "); treating as if empty");
+//      }
+//      return Constants.DIGEST.sentinelHash();
     
-    
+      return null;
     } catch (TimeChainException tcx) {
       throw tcx;
     } catch (Exception x) {

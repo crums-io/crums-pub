@@ -170,12 +170,12 @@ public class Notary implements Channel {
     var ccArgs =
         new CargoChain.InitArgs(chain, settings, cargoChainDir, log);
     
-    this.cargoChain = newCargoChain(ccArgs);
+    this.cargoChain = initCargoChain(ccArgs);
   }
   
   
   
-  protected CargoChain newCargoChain(CargoChain.InitArgs ccArgs) {
+  protected CargoChain initCargoChain(CargoChain.InitArgs ccArgs) {
     return new CargoChain(ccArgs);
   }
     

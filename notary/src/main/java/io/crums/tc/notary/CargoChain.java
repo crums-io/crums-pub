@@ -22,7 +22,6 @@ import io.crums.io.DirectoryRemover;
 import io.crums.io.FileUtils;
 import io.crums.tc.CargoProof;
 import io.crums.tc.ChainParams;
-import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
 import io.crums.tc.TimeBinner;
@@ -132,6 +131,17 @@ public class CargoChain implements Channel {
     }
     this.log = args.log();
     this.blockLog = args.blockLog();
+  }
+  
+  
+  /** Copy / promotion constructor. */
+  protected CargoChain(CargoChain copy) {
+    this.timechain = copy.timechain;
+    this.settings = copy.settings;
+    this.chainParams = copy.chainParams;
+    this.dir = copy.dir;
+    this.log = copy.log;
+    this.blockLog = copy.blockLog;
   }
   
   
@@ -578,8 +588,14 @@ public class CargoChain implements Channel {
   }
   
   
-  
-  public int build() {
+  /**
+   * Builds the committable cargo blocks, commits their hashes to the
+   * time chain and returns a tally of the crums added.
+   * 
+   * @return no. of crums added. A reporting statistic,
+   *         not directly used in logic anywhere
+   */
+  public int buildAndCommit() {
     try {
       // note the current "commit" block no.
       final long lastCommitNo = timechain.size();
@@ -633,15 +649,22 @@ public class CargoChain implements Channel {
       int tally = 0;
       for (var bd : buildDirs) {
         var block = toCargoBlock(bd);
-        final int crumsAdded = block.buildCargo();
-        tally += crumsAdded;
-        var chash = block.cargoHash();
+        var cargoHash = block.buildCargo();
         final long blockNo = block.blockNo();
-        assertCargoHashOnBuild(chash, blockNo, crumsAdded);
-        timechain.recordBlockNo(blockNo, chash);
-        log.info(
-            "block [" + blockNo + "] committed (" +
-            Strings.nOf(crumsAdded, "crum") + ")");
+        long blocksAdded = timechain.recordBlockNo(blockNo, cargoHash.hash());
+        
+        if (blocksAdded <= 0) {
+          log.info(
+              "block [" + blockNo + "] already commited: commit no. [" +
+              (blockNo - blocksAdded) + "]");
+        
+        } else {
+
+          tally += cargoHash.crums();
+          log.info(
+              "block [" + blockNo + "] committed (" +
+              Strings.nOf(cargoHash.crums(), "crum") + ")");
+        }
       }
       
       return tally;
@@ -656,33 +679,6 @@ public class CargoChain implements Channel {
   
   
   
-  
-  /** Used only for equality tests. */
-  private final static ByteBuffer SH = Constants.DIGEST.sentinelHash();
-  
-  private void assertCargoHashOnBuild(
-      ByteBuffer chash, long blockNo, int crumsAdded) {
-    
-    if (chash == null) {
-      var error = new AssertionError(
-          "null cargo hash for block [" + blockNo+
-          "] on build");
-      
-      log.fatal(error);
-      throw error;
-    }
-    
-    if (chash.equals(SH) && crumsAdded != 0) {
-      var error = new AssertionError(
-          "sentinel cargo hash for block [" + blockNo+
-          "] but " + Strings.nOf(crumsAdded, "crum") +
-          " reportedly added on build");
-      
-      log.fatal(error);
-      throw error;
-    }
-    
-  }
   
   
   
