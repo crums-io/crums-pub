@@ -311,7 +311,6 @@ public class TimeChain extends SkipLedger implements Channel {
    * @param utc         the block no. is inferred from this
    * @param cargoHash   the hash of the set of crums witnessed
    * 
-   * @return the number of blocks added
    * @see #recordBlockNo(long, ByteBuffer)
    */
   public long recordBlockForUtc(long utc, ByteBuffer cargoHash)
@@ -344,7 +343,7 @@ public class TimeChain extends SkipLedger implements Channel {
    * 
    * @param cargoHash   the hash of the set of crums witnessed
    * 
-   * @return the number of blocks added
+   * @return {@code blockNo -} {@link #blockCount()}
    * 
    * @see #recordBlockForUtc(long, ByteBuffer)
    */
