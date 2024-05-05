@@ -22,7 +22,8 @@ import io.crums.tc.TimeChain;
 import io.crums.util.TaskStack;
 
 /**
- * 
+ * Main abstraction for witnessing hashes and vending out
+ * receipts.
  */
 public class Notary implements Channel {
   
@@ -171,6 +172,13 @@ public class Notary implements Channel {
         new CargoChain.InitArgs(chain, settings, cargoChainDir, log);
     
     this.cargoChain = initCargoChain(ccArgs);
+  }
+  
+  
+  
+  /** Copy / promotion constructor. */
+  protected Notary(Notary copy) {
+    this.cargoChain = copy.cargoChain;
   }
   
   

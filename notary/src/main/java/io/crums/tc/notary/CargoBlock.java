@@ -172,8 +172,7 @@ public class CargoBlock {
     // if there are one or zero crums, then write the whash file, instead
     if (cc < 2) {
       var crum = builder.first();
-      boolean race = !writeWhash(crum);
-      // TODO log info if true
+      writeWhash(crum);
       return crum == null ? CargoHash.EMPTY : new CargoHash(crum.witnessHash(), 1);
     }
     
@@ -182,8 +181,7 @@ public class CargoBlock {
     var staged = newStagedFile(MRKL, "." + MRKL);
     var merkleRoot = builder.buildToTarget(staged);
     
-    boolean race = !moveStaged(staged, mrklFile());
-    // TODO log info if true
+    moveStaged(staged, mrklFile());
     
     
     return new CargoHash(merkleRoot, cc);

@@ -18,7 +18,7 @@
     <crums.mrkl>1.0.0</crums.mrkl>
     <crums.sldg>0.6.0-SNAPSHOT</crums.sldg> -->
     <crums.timechain>0.1.0-SNAPSHOT</crums.timechain>
-    <crums.stowkwik>[1.0.0,)</crums.stowkwik>
+    <crums.stowkwik>[1.0.2,)</crums.stowkwik>
   </properties>
   
   <name>${project.groupId}::${project.artifactId}</name>

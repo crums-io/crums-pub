@@ -27,6 +27,11 @@ public class FreshCrum extends Crum {
     super(hash, System.currentTimeMillis());
   }
 
+  /** Constructs an instance with the current system time. */
+  public FreshCrum(byte[] hash) {
+    this(ByteBuffer.wrap(hash));
+  }
+
   /** No-copy UTC buffer. */
   public final ByteBuffer utcBuffer() {
     return serialize().position(DATA_SIZE - 8);
