@@ -32,10 +32,13 @@ public class NotaryPolicy {
   private final int blocksSearched;
   
   
+  
+  
   /**
    * Constructs an instance with reasonable defaults.
    * 
-   * @see #NotaryPolicy(ChainParams, int, int, int) full constructor
+   * @see #DEFAULT_BLOCKS_SEARCHED
+   * @see #NotaryPolicy(ChainParams, int, int)
    */
   public NotaryPolicy(ChainParams params, int blocksRetained) {
     this(
@@ -43,6 +46,27 @@ public class NotaryPolicy {
         blocksRetained,
         Math.max((int) params.blockDuration() / 2, MIN_BLOCK_COMMIT_LAG),
         DEFAULT_BLOCKS_SEARCHED);
+  }
+  
+
+  
+  /**
+   * Constructs an instance, computing a reasonable default for the
+   * {@link #blockCommitLag()} setting: it is the greater of
+   * {@linkplain #MIN_BLOCK_COMMIT_LAG the minimum} and half the block
+   * duration.
+   * 
+   * @param params
+   * @param blocksRetained
+   * @param blocksSearched
+   */
+  public NotaryPolicy(
+      ChainParams params, int blocksRetained, int blocksSearched) {
+    this(
+        params,
+        blocksRetained,
+        Math.max((int) params.blockDuration() / 2, MIN_BLOCK_COMMIT_LAG),
+        blocksSearched);
   }
   
 

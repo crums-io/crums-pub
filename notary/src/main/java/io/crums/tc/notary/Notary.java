@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 
 import io.crums.io.FileUtils;
+import io.crums.tc.BlockProof;
 import io.crums.tc.ChainParams;
 import io.crums.tc.Crum;
 import io.crums.tc.TimeBinner;
@@ -276,6 +277,14 @@ public class Notary implements Channel {
 
   
   
+  public BlockProof stateProof() {
+    return cargoChain.timechain().getStateProof();
+  }
+  
+  
+  public BlockProof blockProof(long blockNo) {
+    return cargoChain.timechain().getBlockProof(blockNo);
+  }
   
 
 }

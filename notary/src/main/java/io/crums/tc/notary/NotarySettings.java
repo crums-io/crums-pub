@@ -47,6 +47,17 @@ public class NotarySettings extends NotaryPolicy {
         DEFAULT_MAX_CROSS_MACHINE_TIME_SKEW;
   }
   
+  
+
+  /** Constructs an instance with reasonable defaults. */
+  public NotarySettings(
+      ChainParams params, int blocksRetained, int blocksSearched) {
+    super(params, blocksRetained, blocksSearched);
+    this.maxConcurrentLag = maxConcurrentLag(params);
+    this.maxCrossMachineTimeSkew =
+        DEFAULT_MAX_CROSS_MACHINE_TIME_SKEW;
+  }
+  
   /** Constructs an instance with reasonable defaults. */
   public NotarySettings(NotaryPolicy policy) {
     super(policy);

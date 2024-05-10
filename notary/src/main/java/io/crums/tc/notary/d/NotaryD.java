@@ -12,6 +12,8 @@ import io.crums.util.TaskStack;
 
 /**
  * Notary with background commit-, purge-, and entropy- daemons.
+ * 
+ * @see #close()
  */
 public class NotaryD extends Notary {
   
@@ -21,26 +23,41 @@ public class NotaryD extends Notary {
   
   private final Daemon<CommitRun> commitD;
   private final Daemon<PurgeRun> purgeD;
+  
   /** Optional: may be null. */
   private final Daemon<EntropyRun> noiseD;
   
   
-  
+  /**
+   * Creates an instance, with the entropy daemon running.
+   * 
+   * @param promote   the "basic" instance
+   */
   public NotaryD(Notary promote) {
-    this(promote, Executors.newFixedThreadPool(3), false);
+    this(promote, true);
   }
   
   
   /**
-   * Constructs an instance using the given
-   * "basic" instance.
+   * Creates an instance with using a fixed (regular) thread pool.
    * 
    * @param promote   the "basic" instance
-   * @param executor  thread pool (virtual or o.w.),
-   *                  owned by the instance.
-   * @param noNoise   if {@code false}, then the entropy daemon is not run
+   * @param noise     if {@code false}, then the entropy daemon is not run
    */
-  public NotaryD(Notary promote, ExecutorService executor, boolean noNoise) {
+  public NotaryD(Notary promote, boolean noise) {
+    this(promote, Executors.newFixedThreadPool(noise ? 3 : 2), noise);
+  }
+  
+  
+  /**
+   * Full constructor. Promotes the given "basic" instance.
+   * 
+   * @param promote   the "basic" instance
+   * @param executor  thread pool (virtual or regular),
+   *                  owned by the instance.
+   * @param noise     if {@code false}, then the entropy daemon is not run
+   */
+  public NotaryD(Notary promote, ExecutorService executor, boolean noise) {
     super(promote);
     if (promote instanceof NotaryD)
       throw new IllegalArgumentException(
@@ -49,11 +66,11 @@ public class NotaryD extends Notary {
     this.commitD = newCommitDaemon();
     this.purgeD = newPurgeDaemon();
     
-    if (noNoise) {
-      this.noiseD = null;
-    } else {
+    if (noise) {
       this.noiseD = newEntropyDaemon();
       executor.execute(noiseD);
+    } else {
+      this.noiseD = null;
     }
     executor.execute(commitD);
     executor.execute(purgeD);
@@ -75,6 +92,12 @@ public class NotaryD extends Notary {
   }
 
   
+  
+  /**
+   * Shuts down the background daemons, before closing
+   * the underlying instance (which boils down to closing
+   * its open timechain file).
+   */
   @Override
   public void close() {
     try (var closer = new TaskStack()) {

@@ -420,6 +420,22 @@ public class TimeChain extends SkipLedger implements Channel {
   }
   
   
+  
+  /**
+   * Returns a block proof linking the first block to the last.
+   * 
+   * @throws IllegalArgumentException
+   *      if nothing is committed to the chain (i.e. empty). Since this is
+   *      an edge case, and then only immediately following the chain's
+   *      inception, it is only <em>documented, but not corrected</em>
+   *      (wrong type of exception: no argument, after all).
+   */
+  public BlockProof getStateProof() {
+    long commitNo = size();
+    return getBlockProof(1L, commitNo, commitNo);
+  }
+  
+  
   public BlockProof getBlockProof(long target) {
     return getBlockProof(1L, target, size());
   }
@@ -432,13 +448,17 @@ public class TimeChain extends SkipLedger implements Channel {
           Arrays.asList(args).toString());
     }
     
-    Path bPath =
-        (target == hi || target == lo) ?
-            statePath() :
-              getPath(lo, target, hi);
+    Path bPath;
+    if (hi == lo)
+      bPath = getPath(hi);
+    else if (target == hi || target == lo)
+      bPath = getPath(lo, hi);
+    else
+      bPath = getPath(lo, target, hi);
     
     // bPath is lazy.. pack it
     bPath = bPath.pack().path();
+    
     return new BlockProof(params, bPath);
   }
   

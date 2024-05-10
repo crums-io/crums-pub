@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   
   <groupId>io.crums</groupId>
-  <artifactId>notary</artifactId>
+  <artifactId>ergd</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
   <version>0.1.0-SNAPSHOT</version>
   
@@ -11,16 +11,17 @@
   <properties>
     <revision>0.1.0-SNAPSHOT</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>17</maven.compiler.release>
-    <crums.timechain>0.1.0-SNAPSHOT</crums.timechain>
-    <crums.stowkwik>[1.0.2,)</crums.stowkwik>
+    <maven.compiler.source>22</maven.compiler.source>
+    <maven.compiler.release>22</maven.compiler.release>
+    <crums.notary>0.1.0-SNAPSHOT</crums.notary>
+    <main.class>io.crums.tc.notary.server.main.Ergd</main.class>
   </properties>
   
   <name>${project.groupId}::${project.artifactId}</name>
   <url>https://crums.io/project/crums-pub</url>
   
   <description>
-    Notary for witnessing hashes and issuing witness receipts.
+  Notary REST server.
   </description>
   
   
@@ -82,32 +83,26 @@
   <build>
     <plugins>
 
-      <!--
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>appassembler-maven-plugin</artifactId>
-        <version>2.1.0</version>
-        <configuration>
-          <platforms>
-            <platform>unix</platform>
-          </platforms>
-          <repositoryLayout>flat</repositoryLayout>
-          <programs>
-            
-            <program>
-              <mainClass>io.crums.client.Client</mainClass>
-              <id>crum</id>
-            </program>
-            
-          </programs>
-        </configuration>
-      </plugin>
-      -->
-
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.8.1</version>
+        <configuration>
+          <source>22</source>
+          <target>22</target>
+          
+          <annotationProcessorPaths>
+            <path>
+              <groupId>info.picocli</groupId>
+              <artifactId>picocli-codegen</artifactId>
+              <version>4.6.3</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Aproject=io.crums/ergd</arg>
+          </compilerArgs>
+          
+        </configuration>
       </plugin>
       
 
@@ -123,6 +118,22 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.2</version>
+        
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+              <mainClass>${main.class}</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        
       </plugin>
       
       
@@ -215,17 +226,21 @@
     
     <dependency>
       <groupId>io.crums</groupId>
-      <artifactId>timechain</artifactId>
-      <version>${crums.timechain}</version>
+      <artifactId>notary</artifactId>
+      <version>${crums.notary}</version>
     </dependency>
-    
     
     <dependency>
-      <groupId>io.crums</groupId>
-      <artifactId>stowkwik</artifactId>
-      <version>${crums.stowkwik}</version>
+      <groupId>com.sun.net.httpserver</groupId>
+      <artifactId>http</artifactId>
+      <version>20070405</version>
     </dependency>
     
+    <dependency>
+      <groupId>info.picocli</groupId>
+      <artifactId>picocli</artifactId>
+      <version>4.6.3</version>
+    </dependency>
   
     <!-- Test scope follows -->
     
