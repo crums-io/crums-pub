@@ -6,19 +6,23 @@ package io.crums.tc.notary.server.main;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.logging.LogManager;
 
 import com.sun.net.httpserver.HttpServer;
 
 import io.crums.tc.ChainParams;
 import io.crums.tc.TimeBinner;
 import io.crums.tc.notary.Notary;
+import io.crums.tc.notary.NotaryLog;
 import io.crums.tc.notary.NotaryPolicy;
 import io.crums.tc.notary.NotarySettings;
 import io.crums.tc.notary.d.NotaryD;
-import io.crums.tc.notary.server.HttpServerHelp;
+import io.crums.tc.notary.server.NotaryLogger;
+import io.crums.tc.notary.server.UriHandler;
 import io.crums.util.TaskStack;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -27,16 +31,14 @@ import picocli.CommandLine.Mixin;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
-import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
-import picocli.CommandLine.Help.Ansi;
 
 /**
  * Main launch class.
  */
 @Command(
-    name = "ergd",
+    name = Ergd.NAME,
     mixinStandardHelpOptions = true,
     version = "ergd 0.1",
     description = {
@@ -44,31 +46,92 @@ import picocli.CommandLine.Help.Ansi;
     },
     subcommands = {
         HelpCommand.class,
+        Run.class,
         Incept.class
     })
 public class Ergd {
+
+  final static String NAME = "ergd";
+
+  private final Object lock = new Object();
+
+  private boolean shutdown;
+
+  public Ergd() throws IOException {
+    try (InputStream confStream = getClass().getResourceAsStream("/logging.properties")) {
+      LogManager.getLogManager().readConfiguration(confStream);
+    }
+  }
+
+  public void awaitShutdown() throws InterruptedException {
+    synchronized (lock) {
+      while (!shutdown) {
+        lock.wait();
+      }
+    }
+  }
+
+
+  public NotaryLog log() {
+    return new NotaryLogger(NAME);
+  }
+
+
+  private void signalShutdown() {
+    synchronized (lock) {
+      shutdown = true;
+      lock.notifyAll();
+    }
+  }
   
   
-  static NotaryD notary;
-  
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     int exitCode = new CommandLine(new Ergd()).execute(args);
     System.exit(exitCode);
   }
   
   
-  static void launch(Notary notary, int port) throws IOException {
+  void launch(Notary notary, int port) throws IOException, InterruptedException {
     
     try (var onFail = new TaskStack()) {
+      
+      final var fin = new TaskStack();
+
+      fin.pushRun(this::signalShutdown);
+      
+      onFail.pushClose(notary);
+
       var notaryD = new NotaryD(notary);
       onFail.pushClose(notaryD);
-      var server = HttpServer.create(new InetSocketAddress(80), 0);
-      onFail.close();
-      server.setExecutor(
-          Executors.newVirtualThreadPerTaskExecutor());
+      fin.pushClose(notaryD);
+
+      var server = HttpServer.create(new InetSocketAddress(port), 0);
+
+      for (var uh : UriHandler.all(notary))
+        server.createContext(uh.uri(), uh.handler());
+      
+      var es = Executors.newVirtualThreadPerTaskExecutor();
+      onFail.pushClose(es);
+      fin.pushClose(es);
+
+      server.setExecutor(es);
+      server.start();
+
+      Runtime.getRuntime().addShutdownHook(
+        new Thread(Ergd.class.getSimpleName() + ".shutdown-hook") {
+          @Override
+          public void run() {
+            try (fin) {
+              server.stop(0);
+            }
+          }
+        } );
+      
       
       onFail.clear();
     }
+
+    awaitShutdown();
     
   }
   
@@ -109,7 +172,7 @@ class PortOpt {
   CommandSpec spec;
   
   
-  private int port = 80;
+  private int port = 8080;
   
   
   
@@ -118,7 +181,7 @@ class PortOpt {
       paramLabel = "PORT",
       description = {
           "Port no. REST service listens on",
-          "Default: 80"
+          "Default: 8080"
       }
       )
   public void setPort(int port) {
@@ -187,6 +250,7 @@ class Incept implements Callable<Integer> {
       throw new ParameterException(
           spec.commandLine(),
           "out-of-bounds: --binExponent " + binExponent);
+    this.binExponent = binExponent;
   }
   
   
@@ -268,15 +332,8 @@ class Incept implements Callable<Integer> {
     var settings  = new NotarySettings(
         chainParams, blocksRetained, blocksSearched);
     
-    try (var closeOnFail = new TaskStack()) {
-      var notary = Notary.incept(dirOpt.rootDir(), settings);
-      closeOnFail.pushClose(notary);
-      Ergd.launch(notary, port.no());
-      
-      closeOnFail.clear();
-    }
-    
-    
+    var notary = Notary.incept(dirOpt.rootDir(), settings, ergd.log());
+    ergd.launch(notary, port.no());
     return 0;
   }
   
@@ -284,6 +341,41 @@ class Incept implements Callable<Integer> {
 
 
 
+
+@Command(
+    name = "run",
+    description = {
+        "Starts a REST service on an exising notary directory",
+        "By design, OK if other instances of this program (or",
+        "library) are concurrent users of the directory (e.g.",
+        "network-mounted and accessed from other machines)."
+    }
+    )
+class Run implements Callable<Integer> {
+  
+  @ParentCommand
+  private Ergd ergd;
+  
+  @Spec
+  CommandSpec spec;
+  
+  
+  @Mixin
+  private ReqRootDir dirOpt;
+
+  
+  @Mixin
+  private PortOpt port;
+
+
+  @Override
+  public Integer call() throws Exception {
+    var notary = Notary.load(dirOpt.rootDir(), ergd.log());
+    ergd.launch(notary, port.no());
+    return 0;
+  }
+  
+}
 
 
 

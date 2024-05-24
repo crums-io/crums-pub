@@ -334,7 +334,7 @@ public class ApiHandlers {
   /** Handler for the "update" URI endpoint. */
   public static class UpdateHandler extends Base {
 
-    UpdateHandler(Notary notary, ServerSettings settings) {
+    public UpdateHandler(Notary notary, ServerSettings settings) {
       super(notary, settings);
     }
     
@@ -456,7 +456,7 @@ public class ApiHandlers {
   /** Handler for the "state" URI endpoint. */
   public static class StateHandler extends Base {
 
-    StateHandler(Notary notary, ServerSettings settings) {
+    public StateHandler(Notary notary, ServerSettings settings) {
       super(notary, settings);
     }
     

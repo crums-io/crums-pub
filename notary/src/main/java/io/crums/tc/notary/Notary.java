@@ -13,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.util.Objects;
 
 import io.crums.io.FileUtils;
 import io.crums.tc.BlockProof;
@@ -59,7 +60,7 @@ public class Notary implements Channel {
   }
   
   
-  
+
   
   /**
    * Incepts a new notary in the given directory and returns it. Creates
@@ -69,6 +70,22 @@ public class Notary implements Channel {
    * @param settings  (includes chain params)
    */
   public static Notary incept(File dir, NotarySettings settings)
+      throws IOException {
+
+    return incept(dir, settings, NotaryLog.SYS);
+  }
+
+  
+  
+  /**
+   * Incepts a new notary in the given directory and returns it. Creates
+   * a time-chain file and a "CARGO" subdirectory.
+   * 
+   * @param dir       path to directory notary will live in
+   * @param settings  (includes chain params)
+   * @param log       not {@code null}
+   */
+  public static Notary incept(File dir, NotarySettings settings, NotaryLog log)
       throws IOException {
     
     FileUtils.ensureDir(dir);
@@ -96,7 +113,7 @@ public class Notary implements Channel {
       
       closeOnFail.pushClose(chain);
       
-      var notary = new Notary(chain, settings);
+      var notary = new Notary(chain, settings, log, null);
       
       closeOnFail.clear();
       
@@ -112,6 +129,19 @@ public class Notary implements Channel {
    */
   public static Notary load(File dir) throws IOException {
     
+    return load(dir, NotaryLog.SYS);
+    
+  }
+  
+  
+  /**
+   * Loads and returns an instance from the given directory.
+   * 
+   * @param log       not {@code null}
+   */
+  public static Notary load(File dir, NotaryLog log) throws IOException {
+    
+    Objects.requireNonNull(log);
     final File chainFile = new File(dir, CHAIN);
     final File settingsFile = new File(dir, NOTARY_PROPS);
     
@@ -124,7 +154,7 @@ public class Notary implements Channel {
       
       var settings = NotarySettings.load(settingsFile, chain.params());
       
-      var notary = new Notary(chain, settings);
+      var notary = new Notary(chain, settings, log, null);
       closeOnFail.clear();
       
       return notary;
@@ -144,12 +174,12 @@ public class Notary implements Channel {
   
   
   /**
-   * {@code this(chain, settings, null, NotaryLog.SYS)}.
-   * @see #Notary(TimeChain, NotarySettings, File, NotaryLog)
+   * {@code this(chain, settings, NotaryLog.SYS, null)}.
+   * @see #Notary(TimeChain, NotarySettings, NotaryLog, File)
    */
   protected Notary(
       TimeChain chain, NotarySettings settings) {
-    this(chain, settings, null, NotaryLog.SYS);
+    this(chain, settings, NotaryLog.SYS, null);
   }
   
   
@@ -158,15 +188,15 @@ public class Notary implements Channel {
    * 
    * @param chain         the time chain
    * @param settings      its chain-params must match that of {@code chain}
+   * @param log           not {@code null}
    * @param cargoChainDir if {@code null} then the default diretory named 
    *                      {@linkplain NotaryConstants#CARGO_DIR CARGO} is
    *                      chosen
-   * @param log           not {@code null}
    */
   protected Notary(
       TimeChain chain, NotarySettings settings,
-      File cargoChainDir,
-      NotaryLog log) {
+      NotaryLog log,
+      File cargoChainDir) {
     
     cargoChainDir = cargoChainDir(cargoChainDir, chain);
     var ccArgs =

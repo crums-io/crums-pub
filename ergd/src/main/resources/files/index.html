@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <!--base href="https://crums.io/" target="_blank" -->
+  
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <title>Crums Timechain</title>
+
+  <!-- Bootstrap core CSS -->
+
+  <!-- Custom fonts for this template -->
+  
+  <!-- Custom styles for this template -->
+  <link href="css/bootstrap.bundle.min.css" rel="stylesheet">
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/jquery.slim.min.css" rel="stylesheet">
+  
+    <script src="./js/asmcrypto.min.0.22.0.js"></script>
+	<script type="text/javascript" language="javascript">
+	    
+	    function on_hash_done(hash, time_elapsed_seconds) {
+	        document.getElementById("hex").value = hash;
+	        document.getElementById('progress').innerText = '';
+	        document.getElementById('file_input').disabled = false;
+	    }
+	
+	    function on_hash_progress(progress, time_elapsed_seconds) {
+	        document.getElementById('progress').innerText = Math.round(progress * 1000)/10 + '% ' + time_elapsed_seconds + 's';
+	    }
+	
+	    function on_hash_error(error) {
+	        document.getElementById('progress').innerText = '';
+	        document.getElementById('error').innerText = error;
+	        document.getElementById('file_input').disabled = false;
+	    }
+	
+	    function hash_file(file, on_hash_done, on_hash_progress, on_hash_error) {
+	        var file_size = file.size;
+	        var chunk_size = 1 * 1024 * 1024;
+	        var offset = 0;
+	        var time_started = Date.now();
+	
+	        var hasher = new asmCrypto.SHA256();
+	        var file_reader = new FileReader();
+	
+	        file_reader.onload = function(e) {
+	            if (e.target.error === null) {
+	                offset += e.loaded;
+	        
+	                const uint8_data = new Uint8Array(e.target.result)
+	                
+	                hasher.process(uint8_data);
+	            } else {
+	                on_hash_error(e.target.error);
+	                return;
+	            }
+	
+	            var time_elapsed_seconds = Math.floor((Date.now() - time_started) / 100) / 10;
+	
+	            on_hash_progress(offset / file_size, time_elapsed_seconds);
+	
+	            if (offset < file_size) {
+	                file_reader.readAsArrayBuffer(file.slice(offset, chunk_size + offset));
+	            } else {
+	                hasher.finish();
+	
+	                on_hash_done(asmCrypto.bytes_to_hex(hasher.result), time_elapsed_seconds);
+	
+	                return;
+	            }
+	        }
+	
+	        file_reader.readAsArrayBuffer(file.slice(offset, chunk_size + offset));
+	    }
+	
+	    function on_file_select(e) {
+	        if (e.target.files.length == 1) {
+	            
+	            document.getElementById('file_input').disabled = true;
+	            document.getElementById('choose_file').innerText = e.target.files[0].name;
+	            hash_file(e.target.files[0], on_hash_done, on_hash_progress, on_hash_error);
+	            document.getElementById("crums_result_type").innerHTML = "?";
+              document.getElementById("summary").innerHTML = "<br/><br/>";
+              document.getElementById("crums_result").innerHTML = "";
+	        }
+	    }
+	    
+	    function columnize(s) {
+	      var out = "";
+	      if (s.length == 0)
+	        return out;
+	      
+	      out += s.charAt(0);
+	      var i;
+	      for (i = 1; i < s.length; ++i)
+	        out += ("<br/>" + s.charAt(i));
+	      return out;
+	    }
+	    
+	    
+	    function woopsMsg(status) {
+	      return "Woops! Something went wrong :( <br/> status : " + status;
+	    }
+	    
+	    
+	    function witnessDate(responseObj) {
+	      return new Date(responseObj.crum.utc);
+	    }
+	    
+	    
+	    function witnessHash() {
+	      
+	      document.getElementById("crums_result_type").innerHTML = "?";
+        document.getElementById("summary").innerHTML = "<br/><br/>";
+        document.getElementById("crums_result").innerHTML = "";
+	      
+	      var now = new Date();
+	      
+        var hex = document.getElementById("hex").value;
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+        
+          var message;
+          var columnDecoration;
+          var crumsResult = "";
+          
+          
+          if (this.readyState != 4)
+            return;
+          
+          
+          
+          
+          
+          if (this.status == 200 || this.status == 202) {
+            
+            var responseObj = JSON.parse(this.responseText);
+            
+            crumsResult = JSON.stringify(responseObj, undefined, 4);
+            
+            var crumDate = witnessDate(responseObj);
+            message = "Witnessed on " + crumDate + " <br/> ";
+            
+            if (responseObj.status == "complete") {
+              
+            	var urlEnc = "/api/verify_stamp?crumtrail=" + encodeURIComponent(JSON.stringify(responseObj));
+            	message += "Bookmark this <a href=\"" + urlEnc + "\">WITNESS PROOF<a>, or<br/>"
+              message += "Copy &amp; Paste its Crumtrail for your records:";
+              columnDecoration = "crumtrail";
+            
+            } else {
+            
+              columnDecoration = "crum";
+              var deltaMillis = now.getTime() - crumDate.getTime();
+              message += "A permanent Crumtrail (which you keep) will be generated in ";
+              
+              if (deltaMillis > 250000)
+                message += "seconds:";
+              else if (deltaMillis > 230000)
+                message += "less than a minute:";
+              else if (deltaMillis > 200000)
+                message += "about a minute:";
+              else if (deltaMillis > 130000)
+                message += "2 minutes or less:";
+              else
+                message += "minutes:";
+                
+            }
+            
+          } else {
+              message = woopsMsg(this.status);
+              columnDecoration = "!";
+          }
+            
+            
+          document.getElementById("crums_result_type").innerHTML = columnize(columnDecoration);
+          document.getElementById("summary").innerHTML = message;
+          document.getElementById("crums_result").innerHTML = crumsResult;
+        };
+
+        xhttp.open("GET", "/api/witness?hash=" + hex, true);
+        xhttp.send();
+	    }
+	</script>
+  
+
+</head>
+
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+  <div class="container">
+    <a class="navbar-brand" href="#">
+          <img src="img/logo.png" width="150" height="60" alt="Crums">
+        </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item active">
+          <a class="nav-link" href="#">Home
+                <span class="sr-only">(current)</span>
+              </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="overview.html">Overview</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="rest.html">REST API</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Page Content -->
+<div class="container">
+  <div class="row">
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+      <h1 class="mt-4">Timestamp a File</h1>
+    </div>
+    
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+        <div class="form-row">
+          <div class="col-12 col-md-9 mb-2 mb-md-0">
+            
+            <input type="text" id="hex" class="form-control" size="72" name="hash" placeholder="Enter its SHA-256 or pick the file.." />
+            
+          </div>
+          <div class="col-12 col-md-3">
+            <button class="btn btn-block btn-primary" type="button" onclick="witnessHash()" >Witness!</button>
+          </div>
+        </div>
+      <!--/form -->
+    </div>
+    
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+    
+      <div class="input-group mb-3">
+        <div class="custom-file">
+          <input type="file" class="custom-file-input" id="file_input" onchange="on_file_select(event)" data-toggle="tooltip" title="Note the SHA-256 hash of your file is computed here by your browser; the service never sees your file.">
+          <label class="custom-file-label" for="file_input" id="choose_file">Choose file</label>
+        </div>
+      </div>
+    
+      <div id="progress"></div>
+      <div id="error"></div>
+      <p id="summary">
+      
+      </p>
+      <div class="input-group">
+        <div class="input-group-prepend">
+          <span class="input-group-text" id="crums_result_type"> ? </span>
+        </div>
+        <textarea class="form-control" aria-label="With textarea" id="crums_result" style="font-size: x-small" readonly rows="25"></textarea>
+      </div>
+    </div>
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+          <p class="text-muted small mb-4" style="text-align:right;">&copy; 2020-2024 crums.io </p>
+    </div>
+    
+  </div>
+</div>
+<!-- /.container -->
+
+
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

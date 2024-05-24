@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  
+  <!--base href="https://crums.io/" target="_blank" -->
+  
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <title>Timechain REST API</title>
+
+  <!-- Bootstrap core CSS -->
+
+  <!-- Custom fonts for this template -->
+  
+  <!-- Custom styles for this template -->
+  <link href="css/bootstrap.bundle.min.css" rel="stylesheet">
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/jquery.slim.min.css" rel="stylesheet">
+  
+
+</head>
+
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+  <div class="container">
+    <a class="navbar-brand" href="#">
+          <img src="img/logo.png" width="150" height="60" alt="Crums">
+        </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="index.html">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="overview.html">Overview</a>
+        </li>
+        <li class="nav-item active">
+          <a class="nav-link" href="rest.html">REST API
+                <span class="sr-only">(current)</span></a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Page Content -->
+<div class="container">
+  <div class="row">
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+      
+      <h1 class="mt-4">REST API</h1>
+      
+      <p></p>
+      
+      <p>
+      The Crums Timechain REST API is documented on this page.
+      </p><p>
+      <h2 class="mt-4">URI Endpoints</h2>
+      </p><p>
+      </p><p>
+      The methods in this API can all be accessed via HTTP GET. Even when the HTTP call causes a change in state of the
+      system or causes a new resource (eg crumtrail artifacts) to be created. This is not RESTy, as a GET
+      call is supposed to be a <em>verb</em> that has no side effects (reads but doesn't touch); but it's convenient.
+      Think of the choice of HTTP method in this REST API as a transport layer concern: it doesn't have verb semantics.
+      </p><p>
+      <h3 class="mt-4">Response</h3>
+      </p><p>
+      The response format is JSON. With one notable exeception, the HTTP response status is always 200 (OK); the exception is when the
+      system witnesses a hash it doesn't remember seeing: in that case, the an HTTP 202 (Accepted) since a new record is in the process of
+      being created. (See below).
+      </p>
+      <h4>Why JSON?</h4>
+      <p>
+      There's a good argument for a binary response format: the hash proofs are complicated, validating them requires
+      deep knowledge of their structures, and tho JSON is human readable, it's still hard to interpret. So why bother?
+      <ul>
+      <li>With use the hash proofs seem less complicated. They share a lot of similar parts. Tho a user may never
+      manually parse these parts themselves, the JSON helps build a mental picture of how the hash proofs are structured.
+      </li><li>
+      The aim is to port this library to other programming languages (under the same license): in that event,
+      porting the existing JSON parsers from Java to another language should provide a good first step.
+      </li>
+      </ul>
+      </p><p>
+      <br/>
+      </p><p>
+        
+        
+        <table class="table" id="witness">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col" colspan="4">/api/witness</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Description</th>
+              <td colspan="3">
+                <p>
+                Accepts a new SHA-256 hash to be witnessed in the timechained and returns a <em>crum</em>
+                as reciept. (A crum is a tuple consisting of a 32-byte hash, and an 8-byte UTC witness time).
+                The returned crum may be later used to retrieve a <em>crumtrail</em> via the "update" method.
+                The HTTP response is 202.
+                </p><p>
+                This method is idempotent for the duration of at least 3 [timechain] blocks. (The number can be configured
+                in the timechain settings, but there's no reason to, since increasing it negatively impacts scalability,
+                but does not offer any tangible user benefit.) In rare cases, this method may return a 200
+                response with a fully constructed 
+                </p><p>
+                This method is 
+                </p>
+
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Method</th>
+              <td>GET</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td><th scope="row" colspan="3">Paramaters</th>
+            </tr>
+            <tr>
+              <td>hash</td>
+              <td colspan="3">
+              SHA-256 hash of the object, expressed in either 64 hex digits, or a
+              43 base64-32 digits.
+              </td>
+            </tr>
+            <tr>
+              <td>enc</td>
+              <td colspan="3">
+              Encoding used to represent 32-byte hashes in json response. There are 2 choices:
+              <code>hex</code> and <code>b64</code> (the default).
+              </td>
+            </tr>
+            <tr>
+              <td></td><th scope="row" colspan="3">Example</th>
+            </tr>
+            <tr>
+              <td colspan="4">
+              <small>
+              <a href="/api/witness?enc=hex&hash=41f4915e20810ec339478c516433eab2a5bd8681343c9b47417c50d1e6c025e4">
+              /api/witness?enc=hex&hash=41f4915e20..
+              </a>
+              </small>
+              </td>
+            </tr>
+            
+          </tbody>
+        </table>
+        
+        <table class="table" id="update">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col" colspan="4">/api/update</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Description</th>
+              <td colspan="3">
+                <p>
+                Retrieves the <em>crumtrail</em> for the given <em>crum</em> (previously received
+                via the <a href="#witness">witness</a> method), if the crum's block no. has been
+                committed to the timechain; otherwise, if the crum is valid (is scheduled to be
+                committed to the timechain), then the crum is returned as-is. Finally, if the crum
+                is not valid (i.e. made up), then this method defaults to the <a href="#witness">witness</a>
+                method.
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Method</th>
+              <td>GET</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td><th scope="row" colspan="3">Paramaters</th>
+            </tr>
+            <tr>
+              <td>hash</td>
+              <td colspan="3">
+              SHA-256 hash of the object witnessed, expressed in either 64 hex digits, or a
+              43 base64-32 digits.
+              </td>
+            </tr>
+            <tr>
+              <td>utc</td>
+              <td colspan="3">
+              UTC time hash was witnessed in milliseconds.
+              </td>
+            </tr>
+            <tr>
+              <td>enc</td>
+              <td colspan="3">
+              Encoding used to represent 32-byte hashes in json response. There are 2 choices:
+              <code>hex</code> and <code>b64</code> (the default).
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <table class="table" id="state">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col" colspan="4">/api/state</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Description</th>
+              <td colspan="3">
+                <p>
+                Returns a block proof asserting the hash of the latest block can be derived from a <em>skip path</em>
+                linking the genesis block to the last. The chain's inception time (genesis block), and block
+                resolution (time-binning) are also advertised. The skip path may optionally include a target
+                block no., proving the target block belongs in the timechain.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Method</th>
+              <td>GET</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td><th scope="row" colspan="3">Paramaters</th>
+            </tr>
+            <tr>
+              <td>block</td>
+              <td colspan="3">
+              Target block no. to be included in block proof. <em>Optional.</em>
+              </td>
+            </tr>
+            <tr>
+              <td>enc</td>
+              <td colspan="3">
+              Encoding used to represent 32-byte hashes in json response. There are 2 choices:
+              <code>hex</code> and <code>b64</code> (the default).
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Response</th>
+              <td colspan="3">
+              Block proof and chain parameters in JSON. The block proof is formatted exactly
+              as that found in the block-proof section of a crumtrail's JSON.
+              </td>
+            </tr>
+            <tr>
+              <td></td><th scope="row" colspan="3">Example</th>
+            </tr>
+            <tr>
+              <td colspan="4">
+              <code>
+              <a href="/api/state">/api/state</a>
+              </code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        
+        
+      
+      </p>
+    </div>
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+          <p class="text-muted small mb-4" style="text-align:right;">&copy; 2020-2024 crums.io </p>
+    </div>
+  </div>
+</div>
+<!-- /.container -->
+
+
+
+  <!-- Bootstrap core JavaScript -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>
