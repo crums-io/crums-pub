@@ -16,6 +16,7 @@ import io.crums.sldg.json.HashEncoding;
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
+import io.crums.tc.Receipt;
 import io.crums.tc.TimeBinner;
 import io.crums.tc.json.CrumtrailParser;
 import io.crums.testing.IoTestCase;

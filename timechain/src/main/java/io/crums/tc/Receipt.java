@@ -1,14 +1,10 @@
 /*
  * Copyright 2024 Babak Farhang
  */
-package io.crums.tc.notary;
+package io.crums.tc;
 
 import java.util.Objects;
 import java.util.Optional;
-
-import io.crums.tc.ChainParams;
-import io.crums.tc.Crum;
-import io.crums.tc.Crumtrail;
 
 /**
  * 

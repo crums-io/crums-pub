@@ -24,6 +24,7 @@ import io.crums.tc.CargoProof;
 import io.crums.tc.ChainParams;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
+import io.crums.tc.Receipt;
 import io.crums.tc.TimeBinner;
 import io.crums.tc.TimeChain;
 import io.crums.tc.except.TimeChainException;

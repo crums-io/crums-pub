@@ -19,6 +19,8 @@ import io.crums.io.FileUtils;
 import io.crums.tc.BlockProof;
 import io.crums.tc.ChainParams;
 import io.crums.tc.Crum;
+import io.crums.tc.NotaryService;
+import io.crums.tc.Receipt;
 import io.crums.tc.TimeBinner;
 import io.crums.tc.TimeChain;
 import io.crums.util.TaskStack;
@@ -27,7 +29,7 @@ import io.crums.util.TaskStack;
  * Main abstraction for witnessing hashes and vending out
  * receipts.
  */
-public class Notary implements Channel {
+public class Notary implements NotaryService, Channel {
   
   
   /**
@@ -286,6 +288,7 @@ public class Notary implements Channel {
    * crum's utc and returned packaged as a {@code Receipt}.
    * </p>
    */
+  @Override
   public Receipt witness(ByteBuffer hash) {
     return cargoChain.findReceipt(hash).orElseGet(
         () -> cargoChain.addCrum(new FreshCrum(hash)));
@@ -300,20 +303,17 @@ public class Notary implements Channel {
    * {@linkplain NotaryPolicy#blocksRetained()} blocks have
    * since elapsed), then {@code witness(crum.hash())} is returned.
    */
+  @Override
   public Receipt update(Crum crum) {
     return cargoChain.findCrumReceipt(crum).orElseGet(
         () -> witness(crum.hash()));
   }
 
-  
-  
-  public BlockProof stateProof() {
-    return cargoChain.timechain().getStateProof();
-  }
-  
-  
-  public BlockProof blockProof(long blockNo) {
-    return cargoChain.timechain().getBlockProof(blockNo);
+
+
+  @Override
+  public BlockProof stateProof(boolean hi, Long... blockNos) {
+    return cargoChain.timechain().stateProof(hi, blockNos);
   }
   
 

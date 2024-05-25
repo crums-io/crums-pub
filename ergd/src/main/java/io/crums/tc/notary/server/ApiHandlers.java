@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.TreeSet;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -22,11 +23,11 @@ import io.crums.sldg.json.HashEncoding;
 import io.crums.tc.BlockProof;
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
+import io.crums.tc.Receipt;
 import io.crums.tc.json.BlockProofParser;
 import io.crums.tc.json.CrumParser;
 import io.crums.tc.json.CrumtrailParser;
 import io.crums.tc.notary.Notary;
-import io.crums.tc.notary.Receipt;
 import io.crums.util.json.simple.JSONArray;
 
 /**
@@ -465,36 +466,56 @@ public class ApiHandlers {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
       var queryMap = HttpServerHelp.queryMap(exchange);
+
+      List<String> blockNoStrings = queryMap.get(Constants.Rest.QS_BLOCK);
+      Long[] blockNos;
+      try {
+        if (blockNoStrings == null)
+          blockNos = new Long[] { };
+        else if (blockNoStrings.size() == 1)
+          blockNos = new Long[] { Long.parseLong(blockNoStrings.get(0)) };
+        else {
+          var bNos = new TreeSet<Long>();
+          blockNoStrings.forEach(s -> bNos.add(Long.parseLong(s)));
+          blockNos = bNos.toArray(new Long[bNos.size()]);
+          
+        }
+      } catch (NumberFormatException nfx) {
+        HttpServerHelp.sendBadRequest(
+          exchange,
+          "failed to parse block no.: " + nfx.getMessage());
+        return;
+      }
+
+      var includeLastOpt =
+          HttpServerHelp.optionalBooleanValue(
+            queryMap, Constants.Rest.QS_LAST, exchange);
+
+      if (includeLastOpt == null)
+        return;
       
-      var blockNo =
-          HttpServerHelp.optionalLongValue(
-              queryMap,
-              Constants.Rest.QS_BLOCK,
-              exchange);
       
-      var encoding =
-          getEncoding(queryMap, exchange)
-          .orElse(HashEncoding.BASE64_32);
+      
+      HashEncoding encoding;
+      {
+        var opt = getEncoding(queryMap, exchange);
+        if (opt == null)
+          return;
+        encoding = opt.orElse(HashEncoding.BASE64_32);
+      }
       
       
       
       BlockProof blockProof;
       try {
-          blockProof = blockNo.isPresent() ?
-              notary.blockProof(blockNo.get()) :
-              notary.stateProof();
-      } catch (IllegalArgumentException iax) {
-        if (blockNo.isPresent()) {
-          var msg =
-              "requested block [" + blockNo.get() +
-              "] is ahead of last committed block no.";
-          HttpServerHelp.sendBadRequest(exchange, msg);
-        
-        } else {
-          var msg =
-              "cannot fullfill request until block [1] is first committed";
-          HttpServerHelp.sendText(exchange, 501, msg);
+        if (blockNos.length == 0)
+          blockProof = notary.stateProof();
+        else {
+          boolean hi = includeLastOpt.orElse(true);
+          blockProof = notary.stateProof(hi, blockNos);
         }
+      } catch (IllegalArgumentException iax) {
+        HttpServerHelp.sendBadRequest(exchange, iax.getMessage());
         return;
       }
       

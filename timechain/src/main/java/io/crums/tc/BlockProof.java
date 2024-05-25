@@ -45,10 +45,6 @@ public class BlockProof implements Serial {
     this.chainState = chainState;
     this.chainId = Objects.requireNonNull(chainId);
     
-    if (chainState.loRowNumber() != 1)
-      throw new IllegalArgumentException(
-          "block no. 1 missing in chain state path");
-    
   }
   
   

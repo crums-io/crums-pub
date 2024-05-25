@@ -33,6 +33,7 @@ public class HttpServerHelp {
     GIF("image/gif"),
     JPEG("image/jpeg"),
     ICO("image/x-icon"),
+    SVG("image/svg+xml"),
     JSON("application/json; charset=UTF-8"),
     XML("text/xml; charset=UTF-8");
     
@@ -266,6 +267,31 @@ public class HttpServerHelp {
   public static Optional<Long> optionalLongValue(
       Map<String, List<String>> queryMap, String key, HttpExchange exchange)
           throws IOException {
+
+    var strOpt = optionalStringValue(queryMap, key, exchange);
+    if (strOpt == null)
+      return null;
+    else if (strOpt.isEmpty())
+      return Optional.empty();
+    
+    try {
+      return Optional.of( Long.parseLong(strOpt.get()));
+    
+    } catch (Exception x) {
+      sendBadRequest(
+          exchange,
+          "Malformed integral query string value: " + key + "=" + strOpt.get());
+      return null;
+    }
+    
+  }
+
+
+
+
+  public static Optional<String> optionalStringValue(
+      Map<String, List<String>> queryMap, String key, HttpExchange exchange)
+          throws IOException {
     
     var strList = queryMap.get(key);
     if (strList == null || strList.isEmpty())
@@ -277,20 +303,24 @@ public class HttpServerHelp {
           "Multiple query string values for '" + key + "': " + strList);
       return null;
     }
-    var strValue = strList.get(0);
-    try {
-      return Optional.of( Long.parseLong(strValue));
+    return Optional.of(strList.get(0));
     
-    } catch (Exception x) {
-      sendBadRequest(
-          exchange,
-          "Malformed integral query string value: " + key + "=" + strValue);
-      return null;
-    }
-    
+  
   }
+
+
+
+  public static Optional<Boolean> optionalBooleanValue(
+      Map<String, List<String>> queryMap, String key, HttpExchange exchange)
+          throws IOException {
   
-  
+    var strOpt = optionalStringValue(queryMap, key, exchange);
+    if (strOpt == null)
+      return null;
+    if (strOpt.isEmpty())
+      return Optional.empty();
+    return Optional.of(Boolean.parseBoolean(strOpt.get()));
+  }
   
   
 

@@ -104,7 +104,7 @@
               <th scope="row">Description</th>
               <td colspan="3">
                 <p>
-                Accepts a new SHA-256 hash to be witnessed in the timechained and returns a <em>crum</em>
+                Accepts a new SHA-256 hash to be witnessed in the timechain and returns a <em>crum</em>
                 as reciept. (A crum is a tuple consisting of a 32-byte hash, and an 8-byte UTC witness time).
                 The returned crum may be later used to retrieve a <em>crumtrail</em> via the "update" method.
                 The HTTP response is 202.
@@ -112,11 +112,8 @@
                 This method is idempotent for the duration of at least 3 [timechain] blocks. (The number can be configured
                 in the timechain settings, but there's no reason to, since increasing it negatively impacts scalability,
                 but does not offer any tangible user benefit.) In rare cases, this method may return a 200
-                response with a fully constructed 
-                </p><p>
-                This method is 
+                response with a fully constructed <em>crumtrail</em> (see <a href="#update">update</a>).
                 </p>
-
               </td>
             </tr>
             <tr>
@@ -239,15 +236,21 @@
             <tr>
               <td>block</td>
               <td colspan="3">
-              Target block no. to be included in block proof. <em>Optional.</em>
+              Target block no.(s) to be included in block proof. <em>Optional.</em>
               </td>
             </tr>
             <tr>
               <td>enc</td>
               <td colspan="3">
               Encoding used to represent 32-byte hashes in json response. There are 2 choices:
-              <code>hex</code> and <code>b64</code> (the default).
+              <code>hex</code> and <code>b64</code> (the default). <em>Optional.</em>
               </td>
+            </tr>
+            <tr>
+              <td>last</td>
+              <td colspan="3">
+              If <code>true</code> (case ignored), then the latest committed block is included in
+              the proof. <em>Optional.</em> By default, the latest committed block is included.
             </tr>
             <tr>
               <th scope="row">Response</th>

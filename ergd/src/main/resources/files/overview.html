@@ -265,16 +265,23 @@
       The timechain itself is a compact file. While the REST API does not expose the file directly, the chain can
       be copied and forked. The chain file is the timechain owner's property and they can probably stipulate conditions
       on how it can (or cannot) be used. From an operational standpoint, however, it doesn't matter if a chain is forked.
-      The system is designed to work better the more timechain servers are running on the open web, so forking, altho
-      discouraged, is not altogether counterproductive.
+      The system is designed to work better the more timechain servers are running on the open web, so forking,
+      condoned or not, is not counterproductive.
       </p>
-      <h2 class="mt-4">Scalability</h2>
+      <h2 class="mt-4">On Scaling</h2>
       <p></p>
       <p>
-      The service uses the file system directly as its data store (a directory). The implementation is designed to work even
-      if multiple instances of the service are running against the same directory: e.g. a network mount point shared across
-      multiple VMs. This property in turn helps with keeping the service durable and makes it possible to scale to
-      user load by spinning up new instances.
+      The service uses the file system directly as its data store (a directory). It is designed so that
+      multiple instances of the service can concurrently run against the same directory: e.g. a network mount point shared across
+      multiple VMs. This property in turn helps with keeping the service durable and makes it possible to scale up (down) with
+      user load by spinning up (down) new instances.
+      </p><p>
+      Each instance of the service (<em>this</em> instance, for instance) supports multiple concurrent readers and writers.
+      Processing is I/O bound: by the file system, and by the network layer.
+      Presently, the HTTP implementation leans on the new Java virtual threads, which effectively
+      delivers non-blocking network I/O. As for file I/O bottlenecks, there are a number of caching opportunities
+      future versions make take advantage of. The Alpha version does not cache any data: its only
+      source of data is the file system.
       </p>
       
 

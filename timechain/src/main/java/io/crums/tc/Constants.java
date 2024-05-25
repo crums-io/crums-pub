@@ -42,6 +42,8 @@ public class Constants {
     public final static String QS_UTC = "utc";
     public final static String QS_BLOCK = "block";
     public final static String QS_ENCODING = "enc";
+    /** If {@code true} (the default), then the last block is included in state proof. */
+    public final static String QS_LAST = "last";
     public final static String B64 = "b64";
     public final static String HEX = "hex";
     

@@ -14,7 +14,6 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
-import java.util.Arrays;
 import java.util.Objects;
 
 import io.crums.io.Opening;
@@ -431,35 +430,44 @@ public class TimeChain extends SkipLedger implements Channel {
    *      (wrong type of exception: no argument, after all).
    */
   public BlockProof getStateProof() {
-    long commitNo = size();
-    return getBlockProof(1L, commitNo, commitNo);
+    return stateProof(true, 1L);
   }
   
   
   public BlockProof getBlockProof(long target) {
-    return getBlockProof(1L, target, size());
+    Long[] targets =
+      target == 1L ?
+        new Long[] { 1L } : new Long[] { 1L, target };
+    return stateProof(true, targets);
   }
   
-  public BlockProof getBlockProof(long lo, long target, long hi) {
+
+
+
+
+  public BlockProof stateProof(boolean hi, Long... blockNos) {
+    final int count = blockNos.length;
+    if (count == 0)
+      throw new IllegalArgumentException("empty blockNos");
+    Long[] targets;
+    if (hi) {
+      long lastBlockNo = size();
+      long lastTarget = blockNos[count - 1];
+      if (lastTarget >= lastBlockNo)
+        targets = blockNos;
+      else {
+        targets = new Long[count + 1];
+        targets[count] = lastBlockNo;
+        for (int index = count; index-- > 0; )
+          targets[index] = blockNos[index];
+      }
+    } else
+      targets = blockNos;
     
-    if (lo < 1 || target < lo || hi < target) {
-      Long[] args = { lo, target, hi };
-      throw new IllegalArgumentException(
-          Arrays.asList(args).toString());
-    }
+    // (path implementation is lazy.. so we prefetch it)
+    Path path = getPath(targets).pack().path();
     
-    Path bPath;
-    if (hi == lo)
-      bPath = getPath(hi);
-    else if (target == hi || target == lo)
-      bPath = getPath(lo, hi);
-    else
-      bPath = getPath(lo, target, hi);
-    
-    // bPath is lazy.. pack it
-    bPath = bPath.pack().path();
-    
-    return new BlockProof(params, bPath);
+    return new BlockProof(params, path);
   }
   
   

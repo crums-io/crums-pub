@@ -102,6 +102,7 @@ public class ResourceHandler implements HttpHandler {
         case "png"  -> PNG.mime();
         case "ico"  -> ICO.mime();
         case "jpg", "jpeg"  -> JPEG.mime();
+        case "svg"  -> SVG.mime();
         case "json" -> JSON.mime();
         case "xml"  -> XML.mime();
         default     -> null;
