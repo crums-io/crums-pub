@@ -18,6 +18,18 @@ import io.crums.util.json.simple.JSONObject;
  */
 public class BlockProofParser extends BaseParser<BlockProof> {
 
+
+  public final static BlockProofParser B64 =
+      new BlockProofParser(HashEncoding.BASE64_32);
+
+  public final static BlockProofParser HEX =
+      new BlockProofParser(HashEncoding.HEX);
+
+  
+  public static BlockProofParser forEncoding(HashEncoding encoding) {
+    return encoding == HashEncoding.HEX ? HEX : B64;
+  }
+
   private final ChainParamsParser paramsParser = ChainParamsParser.INSTANCE;
   private final PathPackParser pathParser;
   
@@ -26,6 +38,11 @@ public class BlockProofParser extends BaseParser<BlockProof> {
     super(hashCodec);
     this.pathParser = new PathPackParser(
         hashCodec, BP_STITCH_NOS, BP_HASHES);
+  }
+
+
+  public final ChainParamsParser paramsParser() {
+    return paramsParser;
   }
 
   @Override

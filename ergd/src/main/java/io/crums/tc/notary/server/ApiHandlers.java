@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -27,8 +28,8 @@ import io.crums.tc.Receipt;
 import io.crums.tc.json.BlockProofParser;
 import io.crums.tc.json.CrumParser;
 import io.crums.tc.json.CrumtrailParser;
+import io.crums.tc.json.ReceiptParser;
 import io.crums.tc.notary.Notary;
-import io.crums.util.json.simple.JSONArray;
 
 /**
  * 
@@ -43,39 +44,39 @@ public class ApiHandlers {
   
 
   
-  private final static CrumtrailParser TRAIL_PARSER_B64 =
-      new CrumtrailParser(HashEncoding.BASE64_32);
+  // private final static CrumtrailParser TRAIL_PARSER_B64 =
+  //     new CrumtrailParser(HashEncoding.BASE64_32);
   
-  private final static CrumtrailParser TRAIL_PARSER_HEX =
-      new CrumtrailParser(HashEncoding.HEX);
-  
-  
-  private static CrumtrailParser trailParser(HashEncoding encoding) {
-    switch (encoding) {
-    case BASE64_32:   return TRAIL_PARSER_B64;
-    case HEX:         return TRAIL_PARSER_HEX;
-    default:
-      throw new AssertionError("unaccounted: " + encoding);
-    }
-  }
+  // private final static CrumtrailParser TRAIL_PARSER_HEX =
+  //     new CrumtrailParser(HashEncoding.HEX);
   
   
-  private final static CrumParser CRUM_PARSER_B64 =
-      new CrumParser(HashEncoding.BASE64_32);
+  // private static CrumtrailParser trailParser(HashEncoding encoding) {
+  //   switch (encoding) {
+  //   case BASE64_32:   return TRAIL_PARSER_B64;
+  //   case HEX:         return TRAIL_PARSER_HEX;
+  //   default:
+  //     throw new AssertionError("unaccounted: " + encoding);
+  //   }
+  // }
   
-  private final static CrumParser CRUM_PARSER_HEX =
-      new CrumParser(HashEncoding.HEX);
+  
+  // private final static CrumParser CRUM_PARSER_B64 =
+  //     new CrumParser(HashEncoding.BASE64_32);
+  
+  // private final static CrumParser CRUM_PARSER_HEX =
+  //     new CrumParser(HashEncoding.HEX);
   
   
   
-  private static CrumParser crumParser(HashEncoding encoding) {
-    switch (encoding) {
-    case BASE64_32:   return CRUM_PARSER_B64;
-    case HEX:         return CRUM_PARSER_HEX;
-    default:
-      throw new AssertionError("unaccounted: " + encoding);
-    }
-  }
+  // private static CrumParser crumParser(HashEncoding encoding) {
+  //   switch (encoding) {
+  //   case BASE64_32:   return CRUM_PARSER_B64;
+  //   case HEX:         return CRUM_PARSER_HEX;
+  //   default:
+  //     throw new AssertionError("unaccounted: " + encoding);
+  //   }
+  // }
   
   
 
@@ -294,34 +295,19 @@ public class ApiHandlers {
       }
       
       HashEncoding outCodec = encOpt.orElse(HashEncoding.BASE64_32);
-      Object json;
-      int status;
+      ReceiptParser parser = ReceiptParser.forEncoding(outCodec);
+      final Object json;
+      final int status;
       if (receipts.size() == 1) {
         var rcpt = receipts.get(0);
-        if (rcpt.hasTrail()) {
-          status = 200;
-          json = trailParser(outCodec).toJsonObject(rcpt.trail());
-        } else {
-          status = 202;
-          json = crumParser(outCodec).toJsonObject(rcpt.crum());
-        }
+        json = parser.toJsonObject(receipts.get(0));
+        status = rcpt.hasTrail() ? 200 : 202;
       
       } else {
-        var jArray = new JSONArray(receipts.size());
-        var trailParser = trailParser(outCodec);
-        var crumParser = crumParser(outCodec);
-        status = 200;
-        for (var rcpt : receipts) {
-          Object item;
-          if (rcpt.hasTrail())
-            item = trailParser.toJsonObject(rcpt.trail());
-          else {
-            status = 202;
-            item = crumParser.toJsonObject(rcpt.crum());
-          }
-          jArray.add(item);
-        }
-        json = jArray;
+        status =
+            receipts.stream().anyMatch(Predicate.not(Receipt::hasTrail)) ?
+            202 : 200;
+        json = parser.toJsonArray(receipts);
       }
       
       HttpServerHelp.sendJson(exchange, status, json);
@@ -389,11 +375,7 @@ public class ApiHandlers {
       }
       
       HashEncoding outCodec = encOpt.orElse(HashEncoding.BASE64_32);
-      Object json;
-      if (rcpt.hasTrail())
-        json = trailParser(outCodec).toJsonObject(rcpt.trail());
-      else
-        json = crumParser(outCodec).toJsonObject(rcpt.crum());
+      Object json = ReceiptParser.forEncoding(outCodec).toJsonObject(rcpt);
       
       HttpServerHelp.sendJson(exchange, 200, json);
         

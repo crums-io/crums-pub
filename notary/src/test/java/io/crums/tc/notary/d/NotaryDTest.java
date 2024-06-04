@@ -340,7 +340,12 @@ public class NotaryDTest extends IoTestCase {
         var rcpt = up.receipts.get(subIndex);
         if (index == sampleIndex)
           sample = rcpt;
-        assertTrue(rcpt.hasTrail());
+        
+        // following fails once in a blue moon..
+        // prolly not enough commit slack, or too few blocks retained (?)
+        // add more info next time it occurs..
+        
+        assertTrue(rcpt.hasTrail(), "on block [" + rcpt.blockNo() + "]");
         assertEquals(up.crums.get(subIndex), rcpt.crum());
       }
     }

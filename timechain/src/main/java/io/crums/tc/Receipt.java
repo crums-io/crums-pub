@@ -49,7 +49,7 @@ public class Receipt {
   }
   
   public final long blockNo() {
-    return params.blockNoForUtc(crum.utc());
+    return chainParams().blockNoForUtc(crum().utc());
   }
   
   public final Crumtrail trail() {

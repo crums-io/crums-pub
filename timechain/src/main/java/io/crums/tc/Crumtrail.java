@@ -6,6 +6,7 @@ package io.crums.tc;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Objects;
 
 import io.crums.io.Serial;
@@ -70,6 +71,8 @@ public abstract class Crumtrail implements Serial {
   private Crumtrail(BlockProof blockProof) {
     this.blockProof = Objects.requireNonNull(blockProof);
   }
+
+
   
   
   
@@ -127,7 +130,48 @@ public abstract class Crumtrail implements Serial {
   public final MerkleTrail asMerkleTrail() throws ClassCastException {
     return (MerkleTrail) this;
   }
+
+
+
+
+  public final Crumtrail trimToTarget(BlockProof chain) {
+
+    final Path trailPath = blockProof.chainState();
+    final Path chainPath = chain.chainState();
+    final long hcbn = trailPath.highestCommonNo(chainPath);
+    if (hcbn == 0)
+      return this;
+
+    final long blockNo = blockNo();
+
+    final Path trimPath;
+    
+    if (hcbn == blockNo || chain.chainState().hasRowCovered(blockNo)) {
+
+      trimPath = trailPath.tailPath(blockNo).headPath(blockNo + 1);
+    
+    } else if (hcbn < blockNo) {
+
+      long iHcbn = trailPath.headPath(blockNo + 1L).highestCommonNo(chainPath);
+      if (iHcbn == 0)
+        return this;
+      trimPath = trailPath.tailPath(iHcbn);
+
+    } else {  // hcbn > blockNo
+
+      trimPath = trailPath.tailPath(blockNo).headPath(hcbn + 1);
+    }
+
+
+    var trimBlockProof = new BlockProof(
+      blockProof.chainParams(), trimPath, chain.getChainId());
+
+    return isMerkled() ?
+        new MerkleTrail(trimBlockProof, asMerkleTrail().cargoProof()) :
+        new LoneTrail(trimBlockProof, crum());
+  }
   
+
   
   /**
    * Returns the block number the crum's witness hash was first
@@ -139,7 +183,8 @@ public abstract class Crumtrail implements Serial {
   
   
   
-  protected final void verifyCargoHashInChain() {
+  protected final void verifyCargoHashInChain()
+      throws BlockNotFoundException, CargoConflictException {
     Crum crum = crum();
     final long blockNo = blockNo();
     Path chainState = blockProof.chainState();
@@ -167,7 +212,7 @@ public abstract class Crumtrail implements Serial {
    * A crum trail using the root hash of a Merkle proof as the block's
    * cargo hash.
    */
-  public static class MerkleTrail extends Crumtrail {
+  public final static class MerkleTrail extends Crumtrail {
     
     protected final CargoProof cargoProof;
 
@@ -176,6 +221,7 @@ public abstract class Crumtrail implements Serial {
       this.cargoProof = Objects.requireNonNull(cargoProof);
       verifyCargoHashInChain();
     }
+
     
     public CargoProof cargoProof() {
       return cargoProof;
@@ -217,7 +263,7 @@ public abstract class Crumtrail implements Serial {
    * Proof for a lone crum in a block. The crum's witness
    * hash <em>is</em> the block's cargo hash.
    */
-  public static class LoneTrail extends Crumtrail {
+  public final static class LoneTrail extends Crumtrail {
     
     private final Crum crum;
 
@@ -228,17 +274,17 @@ public abstract class Crumtrail implements Serial {
     }
 
     @Override
-    public final Crum crum() {
+    public Crum crum() {
       return crum;
     }
 
     @Override
-    public final ByteBuffer cargoHash() {
+    public ByteBuffer cargoHash() {
       return ByteBuffer.wrap(crum.witnessHash()).asReadOnlyBuffer();
     }
 
     @Override
-    public final int crumsInBlock() {
+    public int crumsInBlock() {
       return 1;
     }
 
@@ -259,7 +305,7 @@ public abstract class Crumtrail implements Serial {
   }
   
   
-  public static Crumtrail load(ByteBuffer in) {
+  public static Crumtrail load(ByteBuffer in) throws SerialFormatException {
     try {
       var blockProof = BlockProof.load(in);
       int crums = in.getInt();

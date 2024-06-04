@@ -3,6 +3,7 @@
  */
 package io.crums.tc.json;
 
+
 import static io.crums.tc.json.JsonTags.*;
 
 import io.crums.sldg.json.HashEncoding;
@@ -25,6 +26,15 @@ public class CrumtrailParser extends BaseParser<Crumtrail> {
     this.blockProofParser = new BlockProofParser(hashCodec);
     this.cargoProofParser = new CargoProofParser(hashCodec);
     this.crumParser = new CrumParser(hashCodec);
+  }
+
+
+  public final CrumParser crumParser() {
+    return crumParser;
+  }
+
+  public final ChainParamsParser paramsParser() {
+    return blockProofParser.paramsParser();
   }
 
   @Override

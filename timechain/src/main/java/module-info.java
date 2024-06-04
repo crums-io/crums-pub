@@ -6,9 +6,11 @@ module io.crums.tc {
   
   
   requires io.crums.io.store;
-//  requires java.net.http; (TBD)
+  requires io.crums.stowkwik;
+  requires java.net.http;
   
   exports io.crums.tc;
+  exports io.crums.tc.client;
   exports io.crums.tc.except;
   exports io.crums.tc.json;
   
