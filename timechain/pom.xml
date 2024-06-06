@@ -14,7 +14,7 @@
     <maven.compiler.release>17</maven.compiler.release>
     <crums.util>1.0.4-SNAPSHOT</crums.util>
     <crums.jsonimple>1.0.4-SNAPSHOT</crums.jsonimple>
-    <crums.mrkl>1.0.0</crums.mrkl>
+    <crums.mrkl>1.1.0-SNAPSHOT</crums.mrkl>
     <crums.stowkwik>1.0.2</crums.stowkwik>
     <crums.sldg>0.6.0-SNAPSHOT</crums.sldg>
   </properties>
