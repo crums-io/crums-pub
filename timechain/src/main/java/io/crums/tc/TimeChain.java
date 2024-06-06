@@ -549,7 +549,7 @@ public class TimeChain extends SkipLedger implements Channel {
      * @return positive
      */
     public long blockNo() {
-      return rowNumber();
+      return no();
     }
     
     
@@ -595,7 +595,7 @@ public class TimeChain extends SkipLedger implements Channel {
     }
 
     @Override
-    public long rowNumber() {
+    public long no() {
       return blockNo;
     }
 
@@ -645,7 +645,7 @@ public class TimeChain extends SkipLedger implements Channel {
     }
 
     @Override
-    public long rowNumber() {
+    public long no() {
       return blockNo;
     }
     
