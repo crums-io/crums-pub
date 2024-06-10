@@ -18,10 +18,12 @@ import java.util.Objects;
 
 import io.crums.io.Opening;
 import io.crums.io.channels.ChannelUtils;
+import io.crums.sldg.LevelsPointer;
 import io.crums.sldg.Path;
 import io.crums.sldg.Row;
 import io.crums.sldg.SkipLedger;
 import io.crums.tc.except.TimeChainException;
+import io.crums.util.Lists;
 import io.crums.util.Strings;
 import io.crums.util.TaskStack;
 
@@ -541,15 +543,22 @@ public class TimeChain extends SkipLedger implements Channel {
    * (It <em>is</em> a skip ledger row, actually.) Each block
    * takes 68 bytes on disk.
    */
-  public static abstract class SkipBlock extends Row {
+  public abstract class SkipBlock extends Row {
+
+    final long blockNo;
+
+    SkipBlock(long blockNo) {
+      this.blockNo = blockNo;
+      assert blockNo > 0;
+    }
 
     /**
      * Returns the block no. Synonym for row number in skip ledger terms.
      * 
      * @return positive
      */
-    public long blockNo() {
-      return no();
+    public final long blockNo() {
+      return blockNo;
     }
     
     
@@ -568,19 +577,29 @@ public class TimeChain extends SkipLedger implements Channel {
      * Returns this block's serial representation on disk.
      */
     public abstract Block toBlock();
+
+
+
+    @Override
+    public LevelsPointer levelsPointer() {
+      return new LevelsPointer(
+          blockNo,
+          Lists.functorList(
+              SkipLedger.skipCount(blockNo),
+              level -> prevBlockHash(blockNo, level)));
+    }
     
   }
   
   
   
-  
+  /** Memo-ised. */
   private class ChainBlock extends SkipBlock {
     
-    private final long blockNo;
     private final Block block;
     
     ChainBlock(long blockNo, Block block) {
-      this.blockNo = blockNo;
+      super(blockNo);
       this.block = block;
     }
 
@@ -589,21 +608,18 @@ public class TimeChain extends SkipLedger implements Channel {
       return block.cargoHash();
     }
 
-    @Override
-    public ByteBuffer prevHash(int level) {
-      return prevBlockHash(blockNo, level);
-    }
+    // @Override
+    // public ByteBuffer prevHash(int level) {
+    //   return prevBlockHash(blockNo, level);
+    // }
 
-    @Override
-    public long no() {
-      return blockNo;
-    }
+    // @Override
+    // public long no() {
+    //   return blockNo;
+    // }
 
-    @Override
-    public long blockNo() {
-      return blockNo;
-    }
 
+    /** Memo-ized. */
     @Override
     public ByteBuffer hash() {
       return block.blockHash();
@@ -616,15 +632,14 @@ public class TimeChain extends SkipLedger implements Channel {
   }
   
   
-  
+  /** Not memo-ized. */
   private class BuildBlock extends SkipBlock {
     
-    private final long blockNo;
     private final ByteBuffer cargoHash;
     
     
     BuildBlock(long blockNo, ByteBuffer cargoHash) {
-      this.blockNo = blockNo;
+      super(blockNo);
       this.cargoHash = cargoHash;
     }
 
@@ -639,15 +654,17 @@ public class TimeChain extends SkipLedger implements Channel {
       return cargoHash.asReadOnlyBuffer();
     }
 
-    @Override
-    public ByteBuffer prevHash(int level) {
-      return prevBlockHash(blockNo, level);
-    }
 
-    @Override
-    public long no() {
-      return blockNo;
-    }
+
+    // @Override
+    // public ByteBuffer prevHash(int level) {
+    //   return prevBlockHash(blockNo, level);
+    // }
+
+    // @Override
+    // public long no() {
+    //   return blockNo;
+    // }
     
   }
 
