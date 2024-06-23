@@ -37,7 +37,7 @@ public class BlockProofParser extends BaseParser<BlockProof> {
   public BlockProofParser(HashEncoding hashCodec) {
     super(hashCodec);
     this.pathParser = new PathPackParser(
-        hashCodec, BP_STITCH_NOS, BP_HASHES);
+        hashCodec, BP_STITCH_NOS, BP_TYPE, BP_HASHES);
   }
 
 

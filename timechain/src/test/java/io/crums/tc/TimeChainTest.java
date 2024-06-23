@@ -208,7 +208,7 @@ public class TimeChainTest extends TimeChainTestCase {
       System.out.flush();
     }
     
-    final Path chainState = chain.statePath();
+    final Path chainState = chain.statePath().pack().path();
     
     chain.close();
 

@@ -397,7 +397,7 @@ public class TrailRepo implements AutoCloseable {
 
   protected File proposeStateFile(BlockProof state) {
     
-    var crns = Lists.reverse(state.chainState().pack().compressedRowNos());
+    var crns = Lists.reverse(state.chainState().pack().preStitchRowNos());
     final int maxCrns = Math.min(crns.size(), MAX_CRNS);
 
     String prefix = Long.toString(crns.get(0));

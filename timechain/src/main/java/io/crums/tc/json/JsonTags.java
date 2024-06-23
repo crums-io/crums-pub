@@ -33,6 +33,7 @@ public class JsonTags {
   public final static String MRKL_PROOF_HASHES = "mp_hashes";
   
   public final static String BP_STITCH_NOS = "bp_stitch_nos";
+  public final static String BP_TYPE = "bp_type";
   public final static String BP_HASHES = "hashes";
   
   private JsonTags() {  }

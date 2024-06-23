@@ -505,7 +505,8 @@ public class TimeChain extends SkipLedger implements Channel {
       return getBlock(blockNo);
     
     } catch (IOException iox) {
-      throw new UncheckedIOException("on reading block no. " + blockNo, iox);
+      throw new UncheckedIOException(
+          "on reading block [" + blockNo + "]: " + iox, iox);
     }
   }
   
@@ -526,7 +527,7 @@ public class TimeChain extends SkipLedger implements Channel {
       
     } catch (IOException iox) {
       throw new UncheckedIOException(
-          "on reading hash of block no. " + blockNo, iox);
+          "on reading hash for block [" + blockNo + "]: " + iox, iox);
     }
   }
   
