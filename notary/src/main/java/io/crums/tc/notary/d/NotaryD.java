@@ -73,8 +73,13 @@ public class NotaryD extends Notary {
       this.noiseD = null;
     }
     executor.execute(commitD);
+
+    this.cargoChain.sweepGraveyard();
     executor.execute(purgeD);
   }
+
+
+
   
   
   protected Daemon<CommitRun> newCommitDaemon() {

@@ -479,8 +479,34 @@ public class CargoChain implements Channel {
   }
   
   
-  
+  /**
+   * Returns the graveyard directory (where to-be-purged cargo directories are first
+   * moved to).
+   */
+  public File graveyardDir() {
+    File graveyard = new File(dir, GRAVEYARD_DIR);
+    FileUtils.ensureDir(graveyard);
+    return graveyard;
+  }
 
+
+  /**
+   * Sweeps clean (deletes) the contents of the {@linkplain #graveyardDir()
+   * graveyard directory} and returns the number objects (files and directories)
+   * deleted. This may be useful on startup.
+   */
+  public int sweepGraveyard() {
+    int tally = 0;
+    for (File file : graveyardDir().listFiles()) {
+      int count = DirectoryRemover.removeTree(file);
+      if (count < 0) {
+        log.warning("[PURGE]: failed to complete sweep; " + file);
+        tally += -count;
+      } else
+        tally += count;
+    }
+    return tally;
+  }
   
   
   
@@ -533,8 +559,7 @@ public class CargoChain implements Channel {
     
     var purgableBlockDirs = all.subList(0, indexOfLastPurgable + 1);
     
-    File graveyard = new File(dir, GRAVEYARD_DIR);
-    FileUtils.ensureDir(graveyard);
+    File graveyard = graveyardDir();
     
     int tally = 0;
     int errors = 0;
