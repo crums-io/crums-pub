@@ -12,6 +12,9 @@ import java.nio.ByteBuffer;
 public interface NotaryService {
 
 
+  /** Returns static information about the service. */
+  NotaryPolicy policy();
+
 
   /**
    * Witnesses the given {@code hash} and returns a receipt.

@@ -73,7 +73,24 @@ public abstract class Crumtrail implements Serial {
   }
 
 
-  
+  /**
+   * Tests whether the instance is compressed. (Note the only component of
+   * this hash proof that may be compressable is the {@linkplain
+   * #blockProof() block proof}).
+   */
+  public final boolean isCompressed() {
+    return blockProof.isCompressed();
+  }
+
+
+
+  /**
+   * Returns a compressed version of this instance, if not already
+   * compressed; otherwise, this instance is returned.
+   * 
+   * @see #isCompressed()
+   */
+  public abstract Crumtrail compress();
   
   
   public final BlockProof blockProof() {
@@ -222,6 +239,12 @@ public abstract class Crumtrail implements Serial {
       verifyCargoHashInChain();
     }
 
+
+    private MerkleTrail(BlockProof blockProof, CargoProof cargoProof, boolean trustMe) {
+      super(blockProof);
+      this.cargoProof = cargoProof;
+    }
+
     
     public CargoProof cargoProof() {
       return cargoProof;
@@ -253,6 +276,15 @@ public abstract class Crumtrail implements Serial {
       cargoProof.writeTo(out);
       return out;
     }
+
+
+    @Override
+    public MerkleTrail compress() {
+      return
+          isCompressed() ?
+              this :
+              new MerkleTrail(blockProof.compress(), cargoProof, true);
+    }
     
     
     
@@ -271,6 +303,12 @@ public abstract class Crumtrail implements Serial {
       super(blockProof);
       this.crum = Objects.requireNonNull(crum);
       verifyCargoHashInChain();
+    }
+
+
+    private LoneTrail(BlockProof blockProof, Crum crum, boolean trustMe) {
+      super(blockProof);
+      this.crum = crum;
     }
 
     @Override
@@ -299,6 +337,15 @@ public abstract class Crumtrail implements Serial {
       out.putInt(1);
       crum.writeTo(out);
       return out;
+    }
+
+
+    @Override
+    public LoneTrail compress() {
+      return
+          isCompressed() ?
+              this :
+              new LoneTrail(blockProof.compress(), crum, true);
     }
     
     

@@ -35,6 +35,11 @@ public class JsonTags {
   public final static String BP_STITCH_NOS = "bp_stitch_nos";
   public final static String BP_TYPE = "bp_type";
   public final static String BP_HASHES = "hashes";
+
+
+  public final static String P_BLOCK_COMMIT_LAG = "block_commit_lag";
+  public final static String P_BLOCKS_SEARCHED = "blocks_searched";
+  public final static String P_BLOCKS_RETAINED = "blocks_retained";
   
   private JsonTags() {  }
 

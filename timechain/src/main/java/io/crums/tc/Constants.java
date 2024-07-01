@@ -31,6 +31,9 @@ public class Constants {
     
     public final static String API = "/api/";
     
+
+    public final static String POLICY = "policy";
+    public final static String POLICY_URI = API + POLICY;
     public final static String WITNESS = "witness";
     public final static String WITNESS_URI = API + WITNESS;
     public final static String UPDATE = "update";
@@ -46,6 +49,12 @@ public class Constants {
     public final static String QS_LAST = "last";
     public final static String B64 = "b64";
     public final static String HEX = "hex";
+    /**
+     * If {@code false} (defaultS to {@code true}), then the block proof
+     * is not compressed, and contains more linkage information to previous
+     * blocks.
+     */
+    public final static String COMPRESS = "compress";
     
     private Rest() { }
   }

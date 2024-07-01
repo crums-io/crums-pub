@@ -6,14 +6,11 @@ package io.crums.tc.notary.server;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.function.Predicate;
 
@@ -26,8 +23,7 @@ import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Receipt;
 import io.crums.tc.json.BlockProofParser;
-import io.crums.tc.json.CrumParser;
-import io.crums.tc.json.CrumtrailParser;
+import io.crums.tc.json.NotaryPolicyParser;
 import io.crums.tc.json.ReceiptParser;
 import io.crums.tc.notary.Notary;
 
@@ -36,65 +32,38 @@ import io.crums.tc.notary.Notary;
  */
 public class ApiHandlers {
   
+  // (future features commented out.. not presently used)
+
+  // final static String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
+  // final static String HTTP_DATE_GMT_TIMEZONE = "GMT";
   
-  final static String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
-  final static String HTTP_DATE_GMT_TIMEZONE = "GMT";
+  
   
   
   
 
   
-  // private final static CrumtrailParser TRAIL_PARSER_B64 =
-  //     new CrumtrailParser(HashEncoding.BASE64_32);
   
-  // private final static CrumtrailParser TRAIL_PARSER_HEX =
-  //     new CrumtrailParser(HashEncoding.HEX);
-  
-  
-  // private static CrumtrailParser trailParser(HashEncoding encoding) {
-  //   switch (encoding) {
-  //   case BASE64_32:   return TRAIL_PARSER_B64;
-  //   case HEX:         return TRAIL_PARSER_HEX;
-  //   default:
-  //     throw new AssertionError("unaccounted: " + encoding);
-  //   }
-  // }
-  
-  
-  // private final static CrumParser CRUM_PARSER_B64 =
-  //     new CrumParser(HashEncoding.BASE64_32);
-  
-  // private final static CrumParser CRUM_PARSER_HEX =
-  //     new CrumParser(HashEncoding.HEX);
-  
-  
-  
-  // private static CrumParser crumParser(HashEncoding encoding) {
-  //   switch (encoding) {
-  //   case BASE64_32:   return CRUM_PARSER_B64;
-  //   case HEX:         return CRUM_PARSER_HEX;
-  //   default:
-  //     throw new AssertionError("unaccounted: " + encoding);
-  //   }
-  // }
-  
-  
-
-  
-  
-  
+  /**
+   * Common utility methods factored out and used by the other handlers
+   * (no other rhyme or reason to this).
+   */
   static abstract class Base implements HttpHandler {
     
     final Notary notary;
     final ServerSettings settings;
-    final SimpleDateFormat dateFormatter;
+    // final SimpleDateFormat dateFormatter;
     
     
     Base(Notary notary, ServerSettings settings) {
       this.notary = notary;
-      this.settings = Objects.requireNonNull(settings);
-      this.dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
-      dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+      this.settings = settings;
+
+      if (!notary.settings().equalPolicy(settings))
+        throw new IllegalArgumentException("notary / settings mismatch");
+      // this.dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+      // dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+
       if (!notary.isOpen())
         throw new IllegalArgumentException(notary + " is closed");
     }
@@ -128,7 +97,59 @@ public class ApiHandlers {
       
       return hashList;
     }
-    
+
+
+
+    /**
+     * Returns the optional compress code. If {@code null} is returned, then it
+     * was a bad request (400) and was already handled.
+     * 
+     * @return  a <em>legal</em> compress code optional, if present; empty
+     *          optional, if not present in query map; {@code null}, if it was a
+     *          bad request
+     *         
+     */
+    Optional<Integer> getCompressCode(
+        Map<String, List<String>> queryMap, HttpExchange exchange)
+            throws IOException {
+
+      var codeList = queryMap.get(Constants.Rest.COMPRESS);
+      if (codeList == null || codeList.isEmpty())
+        return Optional.empty();
+
+      if (codeList.size() > 1) {
+        HttpServerHelp.sendBadRequest(
+            exchange,
+            "'" + Constants.Rest.COMPRESS +
+            "' set multiple times in querystring");
+
+        return null;
+      }
+
+      int code;
+      try {
+        code = Integer.parseInt(codeList.get(0));
+      } catch (NumberFormatException nfx) {
+        HttpServerHelp.sendBadRequest(
+            exchange,
+            "non-integral value set in '" +
+            Constants.Rest.COMPRESS + "=" + codeList.get(0) + "'");
+
+        return null;
+      }
+
+      if (code < 0 || code > 1) {
+        HttpServerHelp.sendBadRequest(
+            exchange,
+            "illegal compress code in '" +
+            Constants.Rest.COMPRESS + "=" + code + "'");
+
+        return null;
+      }
+
+      System.out.println("======code: " + code);
+      return Optional.of(code);
+    }
 
     
     /**
@@ -229,11 +250,33 @@ public class ApiHandlers {
         return null;
       }
     }
+
+
     
     
   }
   
   
+  /** Handler for the "policy" URI endpoint. */
+  public static class PolicyHandler extends Base {
+
+    private final NotaryPolicyParser policyParser = new NotaryPolicyParser();
+
+    public PolicyHandler(Notary notary, ServerSettings settings) {
+      super(notary, settings);
+    }
+
+    @Override
+    public void handle(HttpExchange exchange) throws IOException {
+      if (!HttpServerHelp.screenGetOnly(exchange))
+        return;
+      HttpServerHelp.sendJson(
+          exchange,
+          200,
+          policyParser.toJsonObject(settings));
+      
+    }
+  }
   
 
   /** Handler for the "witness" URI endpoint. */
@@ -278,6 +321,15 @@ public class ApiHandlers {
           hashes.add(buf);
         }
       }
+
+      final boolean compress;
+      {
+        var compressOpt = getCompressCode(queryMap, exchange);
+        if (compressOpt == null)
+          return;
+        int code = compressOpt.orElse(1);
+        compress = code == 1;
+      }
       
       List<Receipt> receipts;
       try {
@@ -300,7 +352,9 @@ public class ApiHandlers {
       final int status;
       if (receipts.size() == 1) {
         var rcpt = receipts.get(0);
-        json = parser.toJsonObject(receipts.get(0));
+        if (compress)
+          rcpt = rcpt.compress();
+        json = parser.toJsonObject(rcpt);
         status = rcpt.hasTrail() ? 200 : 202;
       
       } else {
@@ -361,6 +415,15 @@ public class ApiHandlers {
       long utc = getUtc(queryMap, exchange, 0);
       if (utc == 0)
         return;
+
+      final boolean compress;
+      {
+        var compressOpt = getCompressCode(queryMap, exchange);
+        if (compressOpt == null)
+          return;
+        int code = compressOpt.orElse(1);
+        compress = code == 1;
+      }
       
       Crum crum = new Crum(hash, utc);
       
@@ -373,6 +436,9 @@ public class ApiHandlers {
             exchange, 500, "internal server error: " + x.getMessage());
         return;
       }
+
+      if (compress)
+        rcpt = rcpt.compress();
       
       HashEncoding outCodec = encOpt.orElse(HashEncoding.BASE64_32);
       Object json = ReceiptParser.forEncoding(outCodec).toJsonObject(rcpt);
@@ -414,25 +480,7 @@ public class ApiHandlers {
     
   }   // class UpdateHandler
     
-    
   
-  
-  static BlockProofParser blockProofParser(HashEncoding encoding) {
-    switch (encoding) {
-    case BASE64_32:
-      return BLOCK_PROOF_PARSER_B64;
-    case HEX:
-      return BLOCK_PROOF_PARSER_HEX;
-    default:
-      throw new AssertionError("unaccounted encoding: " + encoding);
-    }
-  }
-  
-  final static BlockProofParser BLOCK_PROOF_PARSER_B64 =
-      new BlockProofParser(HashEncoding.BASE64_32);
-  
-  final static BlockProofParser BLOCK_PROOF_PARSER_HEX =
-      new BlockProofParser(HashEncoding.HEX);
    
   
   
@@ -463,6 +511,7 @@ public class ApiHandlers {
           
         }
       } catch (NumberFormatException nfx) {
+        nfx.printStackTrace(System.err);
         HttpServerHelp.sendBadRequest(
           exchange,
           "failed to parse block no.: " + nfx.getMessage());
@@ -476,6 +525,15 @@ public class ApiHandlers {
       if (includeLastOpt == null)
         return;
       
+      final boolean compress;
+      {
+        var compressOpt = getCompressCode(queryMap, exchange);
+        if (compressOpt == null)
+          return;
+        int code = compressOpt.orElse(1);
+        compress = code == 1;
+      }
+        
       
       
       HashEncoding encoding;
@@ -500,8 +558,11 @@ public class ApiHandlers {
         HttpServerHelp.sendBadRequest(exchange, iax.getMessage());
         return;
       }
+
+      if (compress)
+        blockProof = blockProof.compress();
       
-      var json = blockProofParser(encoding).toJsonObject(blockProof);
+      var json = BlockProofParser.forEncoding(encoding).toJsonObject(blockProof);
       HttpServerHelp.sendJson(exchange, 200, json);
     }
     

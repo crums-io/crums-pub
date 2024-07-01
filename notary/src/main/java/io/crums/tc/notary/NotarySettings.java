@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Properties;
 
 import io.crums.tc.ChainParams;
+import io.crums.tc.NotaryPolicy;
 import io.crums.util.TidyProperties;
 
 /**

@@ -22,6 +22,7 @@ import io.crums.tc.CargoProof;
 import io.crums.tc.ChainParams;
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
+import io.crums.tc.NotaryPolicy;
 import io.crums.tc.except.TimeChainException;
 import io.crums.tc.notary.except.NotaryException;
 import io.crums.tc.notary.except.NotaryFileException;

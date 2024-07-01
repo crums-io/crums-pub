@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.TreeSet;
 
 import io.crums.io.Serial;
 import io.crums.sldg.HashConflictException;
@@ -57,6 +56,29 @@ public class BlockProof implements Serial {
 
 
   /**
+   * Tells whether the {@linkplain #chainState() chain state} is compressed.
+   * 
+   * @return {@code chainState().isCompressed()}
+   */
+  public final boolean isCompressed() {
+    return chainState.isCompressed();
+  }
+
+
+
+  /**
+   * Returns a {@linkplain #isCompressed() compressed} version of this instance;
+   * if already compressed, then {@code this} is returned.
+   */
+  public final BlockProof compress() {
+    return
+        isCompressed() ?
+            this :
+            new BlockProof(params, chainState.compress(), chainId);
+  }
+
+
+  /**
    * Extends the block proof by stitching a [hash proof] path forward
    * from the given target block no to the highest block in the {@code other}
    * proof. If the other proof does not intersect with this one, or if
@@ -69,6 +91,9 @@ public class BlockProof implements Serial {
    * proof. This way, by repeated invoking this method, one can build proofs
    * that contain a set of target block no.s on the left side (head), and a
    * [hash] skip path to the timechain's latest block on the right side (tail).
+   * </p>
+   * <p>
+   * TODO: needs review since paths can now be condensed
    * </p>
    * 
    * @throws HashConflictException
@@ -257,6 +282,11 @@ public class BlockProof implements Serial {
   }
   
   
+  /**
+   * Loads and returns a memo-ized block proof instance.
+   * 
+   * @return {@code load(in, true)}
+   */
   public static BlockProof load(ByteBuffer in) {
     return load(in, true);
   }

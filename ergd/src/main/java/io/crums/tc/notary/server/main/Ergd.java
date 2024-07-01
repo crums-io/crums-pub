@@ -15,15 +15,16 @@ import java.util.logging.LogManager;
 import com.sun.net.httpserver.HttpServer;
 
 import io.crums.tc.ChainParams;
+import io.crums.tc.NotaryPolicy;
 import io.crums.tc.TimeBinner;
 import io.crums.tc.notary.Notary;
 import io.crums.tc.notary.NotaryLog;
-import io.crums.tc.notary.NotaryPolicy;
 import io.crums.tc.notary.NotarySettings;
 import io.crums.tc.notary.d.NotaryD;
 import io.crums.tc.notary.server.NotaryLogger;
 import io.crums.tc.notary.server.UriHandler;
 import io.crums.util.TaskStack;
+import io.crums.util.json.JsonPrinter;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
@@ -93,6 +94,7 @@ public class Ergd {
   
   void launch(Notary notary, int port) throws IOException, InterruptedException {
     
+    log().info("Launching REST server listening on port " + port);
     try (var onFail = new TaskStack()) {
       
       final var fin = new TaskStack();
@@ -131,6 +133,9 @@ public class Ergd {
       onFail.clear();
     }
 
+    log().info(
+      "\n Ergd launched.. Signal CTRL-C to stop.\n" +
+      " (or you may kill this process by any means; abnormal shutdown OK)\n");
     awaitShutdown();
     
   }
@@ -332,6 +337,14 @@ class Incept implements Callable<Integer> {
     var settings  = new NotarySettings(
         chainParams, blocksRetained, blocksSearched);
     
+    var out = System.out;
+    out.println(" C H A I N    I N C E P T I O N");
+    out.println(" ==============================");
+    // out.println("Settings:");
+    settings.toProperties().store(out, "Settings:");
+    out.println();
+    out.println(" ==============================");
+
     var notary = Notary.incept(dirOpt.rootDir(), settings, ergd.log());
     ergd.launch(notary, port.no());
     return 0;
@@ -370,7 +383,12 @@ class Run implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
+    var out = System.out;
+    out.print("Loading notary..");
     var notary = Notary.load(dirOpt.rootDir(), ergd.log());
+    out.println();
+    notary.settings().toProperties().store(out, "Chain/notary settings");
+    out.println();
     ergd.launch(notary, port.no());
     return 0;
   }

@@ -31,6 +31,9 @@ public record UriHandler(String uri, HttpHandler handler) {
         "/",
         new ResourceHandler()),
       new UriHandler(
+        Constants.Rest.POLICY_URI,
+        new ApiHandlers.PolicyHandler(notary, settings)),
+      new UriHandler(
         Constants.Rest.WITNESS_URI,
         new ApiHandlers.WitnessHandler(notary, settings)),
       new UriHandler(

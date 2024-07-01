@@ -20,6 +20,7 @@ import io.crums.sldg.json.HashEncoding;
 import io.crums.tc.BlockProof;
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
+import io.crums.tc.NotaryPolicy;
 import io.crums.tc.NotaryService;
 import io.crums.tc.Receipt;
 import io.crums.tc.except.NetworkException;
@@ -104,6 +105,12 @@ public class RemoteChain implements NotaryService {
   }
 
 
+
+  @Override
+  public NotaryPolicy policy() throws NetworkException {
+    // TODO
+    return null;
+  }
 
 
   @Override

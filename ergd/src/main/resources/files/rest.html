@@ -86,6 +86,9 @@
       </li><li>
       The aim is to port this library to other programming languages (under the same license): in that event,
       porting the existing JSON parsers from Java to another language should provide a good first step.
+      </li><li>
+      Finally, JSON is relatively URL-freindly. This will prove convenient for encoding hash proofs as URLs.
+      This way, one can consider hosting proof validation tools at a trusted site, for example.
       </li>
       </ul>
       </p><p>
@@ -109,7 +112,8 @@
                 The returned crum may be later used to retrieve a <em>crumtrail</em> via the "update" method.
                 The HTTP response is 202.
                 </p><p>
-                This method is idempotent for the duration of at least 3 [timechain] blocks. (The number can be configured
+                This method is idempotent over the duration of a [timechain] block. (The no. of blocks this
+                idempotency is in effect can be configured
                 in the timechain settings, but there's no reason to, since increasing it negatively impacts scalability,
                 but does not offer any tangible user benefit.) In rare cases, this method may return a 200
                 response with a fully constructed <em>crumtrail</em> (see <a href="#update">update</a>).
@@ -266,6 +270,77 @@
               <td colspan="4">
               <code>
               <a href="/api/state">/api/state</a>
+              </code>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        
+        <table class="table" id="policy">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col" colspan="4">/api/policy</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Description</th>
+              <td colspan="3">
+                <p>
+                Returns the chain paramaters and notary policy settings.
+                These are constant, static values over a typical session. The chain
+                parameters (inception UTC, time-bin resolution) are in fact immutable,
+                but other policy settings may be adjusted over the life of a timechain.
+                While the JSON response is meant to be parsed by software, it's somewhat
+                human readable:
+                </p>
+                
+                <ul>
+                <li><em>incept_utc</em> - Starting UTC of genesis block, in milliseconds.</li>
+                <li><em>bin_exp</em> - Block durations (in milliseconds) and block time
+                    boundaries are modeled by powers of 2. This value, called the "bin
+                    exponent" defines which power of 2 is used for the time binning.
+                    Examples:
+                    <ul>
+                    <li>10: 2<sup>10</sup> = 1024 (millis) ~ 1 second</li>
+                    <li>16: 2<sup>16</sup> ~ 1 minute, 6 seconds </li>
+                    </ul>
+                </li>
+                <p>
+                The bin exponent also delineates block time boundaries. For a given block, the minimum
+                (big endian) UTC value has its rightmost <em>bin_exp</em>-bits set to 0 (zero),
+                while all eligible UTC values in the block share the same remaining leftmost bits;
+                and the maximum UTC value in the block has its rightmost <em>bin_exp</em>-bits
+                set to 1 (one).
+                </p>
+                <li><em>block_commit_lag</em> - No. of (wall time) milliseconds post a
+                    time block before it becomes eligible to be committed. This, in turn,
+                    defines the minimum time that must elapse before a
+                    <a href="#witness">witness</a>ed hash can be <a href="#update">update</a>d
+                    to become a crumtrail.
+                </li>
+                <li><em>blocks_searched</em> - When witnessing a new hash, a service may guarantee
+                    it hasn't seen that same hash within a certain window of blocks. In most cases,
+                    this "feature" is unnecessary and may even be set to zero. </li>
+                <li><em>blocks_retained</em> - Crumtrails are kept around for this many blocks after their
+                    hashes are committed to the chain: after that they are purged.</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">Method</th>
+              <td>GET</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td><th scope="row" colspan="3">Example</th>
+            </tr>
+            <tr>
+              <td colspan="4">
+              <code>
+              <a href="/api/policy">/api/policy</a>
               </code>
               </td>
             </tr>

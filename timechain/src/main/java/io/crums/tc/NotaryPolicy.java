@@ -1,15 +1,12 @@
 /*
  * Copyright 2024 Babak Farhang
  */
-package io.crums.tc.notary;
+package io.crums.tc;
 
 
-import io.crums.tc.ChainParams;
 
 /**
- * Notary settings that concern an end user. 
- * 
- * @see NotarySettings
+ * Timechain / notary settings that concern an end user. 
  */
 public class NotaryPolicy {
   
@@ -155,13 +152,13 @@ public class NotaryPolicy {
   /**
    * Number of logical blocks searched on witnessing a new hash.
    * When a user submits a hash to be
-   * {@linkplain Notary#witness(java.nio.ByteBuffer) witness}ed,
+   * {@linkplain NotaryService#witness(java.nio.ByteBuffer) witness}ed,
    * the notary looks back thru a fixed number (<em>this no.</em>)
-   * of recent cargo blocks to check whether it has already seen
+   * of recent "cargo" blocks to check whether it has already seen
    * the hash.
    * <p>
    * Note, <em>logical block</em> here is just a block no.: there may
-   * or may not exist a cargo block (directory) for that block no.
+   * or may not exist any witnesses hashes for that block no.
    * </p>
    * 
    * @return &ge; 0 (zero means no blocks are searched)

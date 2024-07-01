@@ -19,6 +19,7 @@ import io.crums.io.FileUtils;
 import io.crums.tc.BlockProof;
 import io.crums.tc.ChainParams;
 import io.crums.tc.Crum;
+import io.crums.tc.NotaryPolicy;
 import io.crums.tc.NotaryService;
 import io.crums.tc.Receipt;
 import io.crums.tc.TimeBinner;
@@ -272,6 +273,12 @@ public class Notary implements NotaryService, Channel {
   
   public NotarySettings settings() {
     return cargoChain.settings();
+  }
+
+
+  @Override
+  public NotaryPolicy policy() {
+    return settings();
   }
 
 
