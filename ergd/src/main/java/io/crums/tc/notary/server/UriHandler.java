@@ -10,6 +10,8 @@ import com.sun.net.httpserver.HttpHandler;
 import io.crums.tc.Constants;
 import io.crums.tc.notary.Notary;
 
+
+/** Pairs a URI with an {@code HttpHandler}. */
 public record UriHandler(String uri, HttpHandler handler) {
 
   public UriHandler {
@@ -42,6 +44,13 @@ public record UriHandler(String uri, HttpHandler handler) {
       new UriHandler(
         Constants.Rest.STATE_URI,
         new ApiHandlers.StateHandler(notary, settings)),
+      new UriHandler(
+        Constants.Rest.H_CODEC_URI,
+        new UtilHandlers.HashConverter()),
+      new UriHandler(
+        Constants.Rest.DATE_URI,
+        new UtilHandlers.UtcDatePrinter()),
+      
     };
 
     return all;

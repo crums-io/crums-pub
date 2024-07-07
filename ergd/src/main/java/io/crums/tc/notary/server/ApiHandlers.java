@@ -9,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeSet;
 import java.util.function.Predicate;
@@ -28,7 +27,7 @@ import io.crums.tc.json.ReceiptParser;
 import io.crums.tc.notary.Notary;
 
 /**
- * 
+ * HTTP handlers for the REST API.
  */
 public class ApiHandlers {
   
@@ -40,6 +39,75 @@ public class ApiHandlers {
   
   
   
+
+    /**
+     * Picks the encoding from the given list of hashes. It must be
+     * one or the other; mixed encodings are not supported. If one cannot
+     * be picked, then a bad-request (400) is sent, and null is returned.
+     */
+    static HashEncoding pickEncoding(
+        List<String> hashes, HttpExchange exchange)
+            throws IOException {
+      
+      final int len = hashes.get(0).length();
+      final HashEncoding encoding;
+      if (len == 43) {
+        encoding = HashEncoding.BASE64_32;
+      } else if (len == 64) {
+        encoding = HashEncoding.HEX;
+      } else {
+        HttpServerHelp.sendBadRequest(
+            exchange,
+            "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
+            "=" + hashes.get(0));
+        return null;
+      }
+      for (int index = hashes.size(); index-- > 1; ) {
+        int len2 = hashes.get(index).length();
+        if (len2 != len) {
+          String msg;
+          if (len2 + len == 43 + 64) {
+            msg = 
+                "mixed hash encodings are not supported: " +
+                Constants.Rest.QS_HASH + "=" + hashes.get(0) + " ; " +
+                Constants.Rest.QS_HASH + "=" + hashes.get(index);
+          } else {
+            msg =
+                "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
+                "=" + hashes.get(index);
+          }
+
+          HttpServerHelp.sendBadRequest(exchange,msg);
+          return null;
+        } // if (len2 != len
+      } // for
+      
+      return encoding;
+    }
+    
+    
+    
+    /**
+     * Returns the given {@code hash} as a 32-byte buffer. If malformed,
+     * then a bad-request (400) is sent and {@code null} is returned.
+     */
+    static ByteBuffer toBuffer(
+        String hash, HashEncoding encoding, HttpExchange exchange)
+            throws IOException {
+      
+      try {
+        return ByteBuffer.wrap(encoding.decode(hash));
+      
+      } catch (Exception x) {
+        HttpServerHelp.sendBadRequest(
+            exchange,
+            "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
+            "=" + hash);
+        return null;
+      }
+    }
+
+
   
 
   
@@ -147,7 +215,6 @@ public class ApiHandlers {
         return null;
       }
 
-      System.out.println("======code: " + code);
       return Optional.of(code);
     }
 
@@ -183,75 +250,6 @@ public class ApiHandlers {
       return null;
     }
     
-
-    /**
-     * Picks the encoding from the given list of hashes. It must be
-     * one or the other; mixed encodings are not supported. If one cannot
-     * be picked, then a bad-request (400) is sent, and null is returned.
-     */
-    HashEncoding pickEncoding(
-        List<String> hashes, HttpExchange exchange)
-            throws IOException {
-      
-      final int len = hashes.get(0).length();
-      final HashEncoding encoding;
-      if (len == 43) {
-        encoding = HashEncoding.BASE64_32;
-      } else if (len == 64) {
-        encoding = HashEncoding.HEX;
-      } else {
-        HttpServerHelp.sendBadRequest(
-            exchange,
-            "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
-            "=" + hashes.get(0));
-        return null;
-      }
-      for (int index = hashes.size(); index-- > 1; ) {
-        int len2 = hashes.get(index).length();
-        if (len2 != len) {
-          String msg;
-          if (len2 + len == 43 + 64) {
-            msg = 
-                "mixed hash encodings are not supported: " +
-                Constants.Rest.QS_HASH + "=" + hashes.get(0) + " ; " +
-                Constants.Rest.QS_HASH + "=" + hashes.get(index);
-          } else {
-            msg =
-                "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
-                "=" + hashes.get(index);
-          }
-
-          HttpServerHelp.sendBadRequest(exchange,msg);
-          return null;
-        } // if (len2 != len
-      } // for
-      
-      return encoding;
-    }
-    
-    
-    
-    /**
-     * Returns the given {@code hash} as a 32-byte buffer. If malformed,
-     * then a bad-request (400) is sent and {@code null} is returned.
-     */
-    ByteBuffer toBuffer(
-        String hash, HashEncoding encoding, HttpExchange exchange)
-            throws IOException {
-      
-      try {
-        return ByteBuffer.wrap(encoding.decode(hash));
-      
-      } catch (Exception x) {
-        HttpServerHelp.sendBadRequest(
-            exchange,
-            "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
-            "=" + hash);
-        return null;
-      }
-    }
-
-
     
     
   }
@@ -495,6 +493,10 @@ public class ApiHandlers {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
+      
+      if (!HttpServerHelp.screenGetOnly(exchange))
+        return;
+        
       var queryMap = HttpServerHelp.queryMap(exchange);
 
       List<String> blockNoStrings = queryMap.get(Constants.Rest.QS_BLOCK);

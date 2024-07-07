@@ -41,6 +41,15 @@ public class Constants {
     public final static String STATE = "state";
     public final static String STATE_URI = API + STATE;
     
+    public final static String UTIL = API + "util/";
+    public final static String H_CODEC = "h_codec";
+    public final static String H_CODEC_URI = UTIL + H_CODEC;
+    public final static String DATE = "date";
+    public final static String DATE_URI = UTIL + DATE;
+    public final static String VERIFY = "verify";
+    public final static String VERIFY_URI = UTIL + VERIFY;
+
+    
     public final static String QS_HASH = "hash";
     public final static String QS_UTC = "utc";
     public final static String QS_BLOCK = "block";
@@ -55,6 +64,9 @@ public class Constants {
      * blocks.
      */
     public final static String COMPRESS = "compress";
+
+
+
     
     private Rest() { }
   }
