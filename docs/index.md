@@ -121,7 +121,7 @@ a hash proof linking block [534] to the genisis block [1] need only contain info
 
 More precisely, the byte size of such proofs scale as
 
->   **O(** log(log(*n*) x log(*n*) **)**
+>   **O(** log(log(*n*)) x log(*n*) **)**
 
 where *n* is the no. of blocks. However for all intents and purposes *log log n* can be
 treated as constant.
