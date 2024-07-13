@@ -19,9 +19,10 @@ and publishes their collective hash per block (bin) interval as the cargo hash o
 the corresponding timechain block. The notary is designed to be safe under concurrent
 read/write access from multiple *processes* (not just threads).
 3. [ergd](https://github.com/crums-io/crums-pub/tree/main/ergd) - This is a standaolone,
-embedded HTTP REST server.
+embedded HTTP REST server launched from the command line. New timechains can also be
+incepted (created) thru this CLI.
 
-## Project Status
+## Status
 
 The first (alpha) version is nearing release. It works.
 
@@ -29,7 +30,9 @@ The first (alpha) version is nearing release. It works.
 
 The most glaring TODOs:
 
-* Client-side storage and archival of crumtrails (witness proofs) needs work. As a chain evolves (as it accumulates new blocks) 
+* Client-side storage and archival of crumtrails (witness proofs) needs work. As a chain evolves (as it accumulates new blocks) the block proofs in archived crumtrails can be updated *en mass*.
+With a bit of planning, this can be made efficient, since crumtrails from the same chain share
+the same lineage and therefore share common information.
 * Need to work out details about how otherwise independent timechains on the network can choose to record one another's state in order to assert each others' bona fides.
 * Broken landing page (To be fixed before release).
 * Snapshot build script.
