@@ -30,6 +30,10 @@ The first (alpha) version is nearing release. It works.
 
 The most glaring TODOs:
 
+* Command line timechain client. (There'll be *something* on first release.)
+    * witness
+    * verify crumtrail
+    * update block proof (in crumtrail) from timechain
 * Client-side storage and archival of crumtrails (witness proofs) needs work. As a chain evolves (as it accumulates new blocks) the block proofs in archived crumtrails can be updated *en mass*.
 With a bit of planning, this can be made efficient, since crumtrails from the same chain share
 the same lineage and therefore share common information.
@@ -39,9 +43,12 @@ the same lineage and therefore share common information.
 
 ## Building the SNAPSHOT
 
-The project's principal build tool is maven. Presently, SNAPSHOT versions are not published
+The project's build tool is Maven. Presently, SNAPSHOT versions are not published
 anywhere. To build this project, you'll have to clone and build a number of dependencies
-yourself. Here's the suggested build order, roughly in order of dependency.
+yourself. Clone the following projects in the suggested order, and build them using
+
+>   $ mvn clean install
+
 
 
 1. [merkle-tree](https://github.com/crums-io/merkle-tree) - Merkle tree implementation. Dependencies: none.
@@ -54,10 +61,22 @@ this project (the relationship is in fact now reversed). Dependencies: `merkle-t
 1. Clone *this* project and build:
 
     1. [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain). Dependencies: `skipledger-base`.
-    2. [notary](https://github.com/crums-io/crums-pub/tree/main/notary). Dependencies: `timechain`.
+    2. [notary](https://github.com/crums-io/crums-pub/tree/main/notary). Dependencies: `timechain`, `stowkwik`.
     3. [ergd](https://github.com/crums-io/crums-pub/tree/main/ergd). Dependencies: `notary`.
 
+
+To build the last project `ergd` (the REST server)
+
+>   $ mvn clean package appassembler:assemble
+
+Then give this a try..
+
+>   $ ./target/binary/bin/ergd -h
+
+
+
 ~ Babak
+
 July 2024
 
 
