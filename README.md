@@ -44,8 +44,10 @@ the same lineage and therefore share common information.
 ## Building the SNAPSHOT
 
 The project's build tool is Maven. Presently, SNAPSHOT versions are not published
-anywhere. To build this project, you'll have to clone and build a number of dependencies
-yourself. Clone the following projects in the suggested order, and build them using
+anywhere. Much has been refactored across projects and much remains before the SNAPSHOT
+moniker can be dropped. To build this project, you'll have to clone and build a number
+of dependencies yourself. Clone the following projects in the suggested order, and build
+each using
 
 >   $ mvn clean install
 
@@ -53,7 +55,7 @@ yourself. Clone the following projects in the suggested order, and build them us
 
 1. [merkle-tree](https://github.com/crums-io/merkle-tree) - Merkle tree implementation. Dependencies: none.
 1. [io-util](https://github.com/crums-io/io-util) - Small, multi-module, utility library. Dependencies: none.
-1. [stowkwik](https://github.com/crums-io/stowkwik) - Simple file-per-object store, indexed by hash. Dependencies: `io-util`.
+1. `$ cd TC-1` - Build the legacy client (the TC-2 subdir in *this* repo). This is slated for removal after refactorings across this and the next project (skipledger) are completed. Dependencies: `merkle-tree`, `io-util`.
 1. [skipledger](https://github.com/crums-io/skipledger) - Base module defining the data
 structure and other modules for packaging proofs from general ledgers. This project used to
 know about this repo. The code was refactored so that the base layer no longer knows about
