@@ -53,7 +53,7 @@ Timechains package hash proofs of their witnessing hashes in a structure called 
 (described in a later section). It asserts the overall structure of the chain, as well as
 the block no. in which the hash was witnessed. By periodically having its chain state (the hash
 of a recent block) witnessed on one or more other timechains (recorded as crumtrails) a chain will be
-able establish its bona fides about the *minimum age* of its blocks.
+able to establish its bona fides about the *minimum age* of its blocks.
 
 Alternatively, the declaration may be bootstrapped at some other trusted, timestamped
 location. Examples range from posting the chain's hash to social media (if you trust the whims of
@@ -79,7 +79,7 @@ it will be a good beacon.)
 
 A variety factors will influence the design of "declarations". One thing to note is that while crumtrails
 are small, self-contained, and quick-to-verify, it may be acceptable if a chain's corpus of "declarations"
-are themselves not so compact. For example, it may be possible to compute a perhaps computationally
+is not so compact. For example, it may be possible to compute a perhaps computationally
 expensive score for a chain's trustworthiness generally. Opt-in discovery protocols,
 automation, beacon construction, and supporting proof structures.. these are topics worth addressing
 *after* (and *if*) a community of timechain operators develops.
@@ -187,7 +187,7 @@ whose cargo hash at that block no. matches the root hash in the Merkle proof abo
 When a crumtrail is first retrieved from the [notary] service, its block no. (the block no. it was
 witnessed in) lies near the tail (end) of the timechain. As time elapses and the timechain accumulates
 new blocks, the  crumtrail's block proof can be updated to include (link to) later timechain blocks.
-The service dispense block proofs linking any set of (existing) timechain block no.s on demand.
+The service dispenses block proofs linking any set of (existing) timechain block no.s on demand.
 But note, block proofs in crumtrails from the same timechain share a good deal of common block
 information. As a result, when archived together, the block proofs of older crumtrails can often be
 extended to those used in the newer crumtrails.
