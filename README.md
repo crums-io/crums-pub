@@ -43,7 +43,8 @@ the same lineage and therefore share common information.
 
 ## Building the SNAPSHOT
 
-The project's build tool is Maven. Presently, SNAPSHOT versions are not published
+The project's build tool is Maven. It uses Java's new virtual threads, so JDK 22
+(at the time of this writing, the latest) is a minimum requirement. Presently, SNAPSHOT versions are not published
 anywhere. Much has been refactored across projects and much remains before the SNAPSHOT
 moniker can be dropped. To build this project, you'll have to clone and build a number
 of dependencies yourself. Clone the following projects in the suggested order, and build
@@ -59,7 +60,7 @@ each using
 1. [skipledger](https://github.com/crums-io/skipledger) - Base module defining the data
 structure and other modules for packaging proofs from general ledgers. This project used to
 know about this repo. The code was refactored so that the base layer no longer knows about
-this project (the relationship is in fact now reversed). Dependencies: `merkle-tree`, `io-util`.
+this project (the relationship is in fact now reversed). Dependencies: `merkle-tree`, `io-util`, `tc-1`
 1. Clone *this* project and build:
 
     1. [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain). Dependencies: `skipledger-base`.
