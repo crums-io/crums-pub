@@ -5,6 +5,8 @@ package io.crums.tc.notary.server;
 
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,7 @@ import io.crums.tc.json.BlockProofParser;
 import io.crums.tc.json.NotaryPolicyParser;
 import io.crums.tc.json.ReceiptParser;
 import io.crums.tc.notary.Notary;
+
 
 /**
  * HTTP handlers for the REST API.
@@ -135,6 +138,33 @@ public class ApiHandlers {
       if (!notary.isOpen())
         throw new IllegalArgumentException(notary + " is closed");
     }
+
+
+
+
+    @Override
+    public final void handle(HttpExchange exchange) throws IOException {
+      try {
+
+        handleImpl(exchange);
+      
+      } catch (IOException | RuntimeException x) {
+
+        StringWriter trace = new StringWriter();
+        x.printStackTrace(new PrintWriter(trace));
+
+        var msg = trace.toString();
+        System.err.println(msg);
+
+        msg = "\n\nTimechain encountered an internal error:\n\n" + msg;
+        HttpServerHelp.sendText(exchange, 500, msg);
+
+        throw x;
+      }
+    }
+
+
+    protected abstract void handleImpl(HttpExchange exchange) throws IOException;
     
 
     /**
@@ -265,7 +295,7 @@ public class ApiHandlers {
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    protected void handleImpl(HttpExchange exchange) throws IOException {
       if (!HttpServerHelp.screenGetOnly(exchange))
         return;
       HttpServerHelp.sendJson(
@@ -285,7 +315,7 @@ public class ApiHandlers {
     }
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    protected void handleImpl(HttpExchange exchange) throws IOException {
       if (!HttpServerHelp.screenGetOnly(exchange))
         return;
       
@@ -380,7 +410,7 @@ public class ApiHandlers {
     
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    protected void handleImpl(HttpExchange exchange) throws IOException {
 
       if (!HttpServerHelp.screenGetOnly(exchange))
         return;
@@ -492,12 +522,15 @@ public class ApiHandlers {
     
 
     @Override
-    public void handle(HttpExchange exchange) throws IOException {
+    protected void handleImpl(HttpExchange exchange) throws IOException {
       
       if (!HttpServerHelp.screenGetOnly(exchange))
         return;
         
       var queryMap = HttpServerHelp.queryMap(exchange);
+
+      var out = System.out;
+      out.println(getClass() + " - queryMap: " + queryMap);
 
       List<String> blockNoStrings = queryMap.get(Constants.Rest.QS_BLOCK);
       Long[] blockNos;
@@ -561,13 +594,19 @@ public class ApiHandlers {
         return;
       }
 
+
       if (compress)
         blockProof = blockProof.compress();
       
+      out.println(getClass() + " - blockProof:" + blockProof);
+      
       var json = BlockProofParser.forEncoding(encoding).toJsonObject(blockProof);
+
+      out.println(getClass() + " - json:" + json);
       HttpServerHelp.sendJson(exchange, 200, json);
+
     }
-    
+     
   }
   
   
