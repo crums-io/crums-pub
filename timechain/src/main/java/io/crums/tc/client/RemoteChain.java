@@ -114,7 +114,7 @@ public class RemoteChain implements NotaryService {
 
 
   @Override
-  public Receipt witness(ByteBuffer hash) throws NetworkException {
+  public Receipt witness(ByteBuffer hash, long fromBlockNo) throws NetworkException {
     String url =
         hostUrl + Constants.Rest.WITNESS_URI + '?' +
         Constants.Rest.QS_HASH + '=' +
@@ -166,7 +166,7 @@ public class RemoteChain implements NotaryService {
 
   
   @Override
-  public Receipt update(Crum crum) throws NetworkException {
+  public Receipt update(Crum crum, long fromBlockNo) throws NetworkException {
     
     String url =
         hostUrl + Constants.Rest.UPDATE_URI + '?' +

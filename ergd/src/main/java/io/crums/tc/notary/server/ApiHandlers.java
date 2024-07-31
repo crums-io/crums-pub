@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,6 +28,7 @@ import io.crums.tc.json.BlockProofParser;
 import io.crums.tc.json.NotaryPolicyParser;
 import io.crums.tc.json.ReceiptParser;
 import io.crums.tc.notary.Notary;
+import io.crums.util.Lists;
 
 
 /**
@@ -279,6 +281,67 @@ public class ApiHandlers {
           "unknown hash encoding: " + Constants.Rest.QS_ENCODING + "=" + encoding);
       return null;
     }
+
+
+
+
+    Long[] getBlockNos(
+        Map<String, List<String>> queryMap, HttpExchange exchange)
+            throws IOException {
+
+
+      List<String> blockNoStrings = queryMap.get(Constants.Rest.QS_BLOCK);
+      Long[] blockNos;
+      try {
+        if (blockNoStrings == null)
+          blockNos = EMPTY_NOS;
+        else if (blockNoStrings.size() == 1)
+          blockNos = new Long[] { Long.parseLong(blockNoStrings.get(0)) };
+        else {
+          var bNos = new TreeSet<Long>();
+          blockNoStrings.forEach(s -> bNos.add(Long.parseLong(s)));
+          blockNos = bNos.toArray(new Long[bNos.size()]);
+          
+        }
+      } catch (NumberFormatException nfx) {
+        nfx.printStackTrace(System.err);
+        HttpServerHelp.sendBadRequest(
+          exchange,
+          "failed to parse block no.: " + nfx.getMessage());
+        return null;
+      }
+      return blockNos;
+    }
+
+    private final static Long[] EMPTY_NOS = { };
+
+
+
+    long getFromBlockNo(
+        Map<String, List<String>> queryMap, HttpExchange exchange)
+            throws IOException {
+
+      Long[] blockNos =getBlockNos(queryMap, exchange);
+      if (blockNos == null)
+        return 0L;
+      
+      switch (blockNos.length) {
+      case 0:   return 1L;
+      case 1:
+        long bn = blockNos[0];
+        if (bn < 1L) {
+          HttpServerHelp.sendBadRequest(
+              exchange, "out-of-bounds block no.: " + bn);
+          return 0;
+        }
+        return bn;
+
+      default:
+        HttpServerHelp.sendBadRequest(
+            exchange, "more than one block no.: " + Arrays.asList(blockNos));
+        return 0;
+      }
+    }
     
     
     
@@ -358,15 +421,19 @@ public class ApiHandlers {
         int code = compressOpt.orElse(1);
         compress = code == 1;
       }
+
+      final long fromBlockNo = getFromBlockNo(queryMap, exchange);
+      if (fromBlockNo < 1L)
+        return;
       
       List<Receipt> receipts;
       try {
         if (hashes.size() == 1)
-          receipts = List.of(notary.witness(hashes.get(0)));
+          receipts = List.of(notary.witness(hashes.get(0), fromBlockNo));
         else {
           receipts = new ArrayList<>(hashes.size());
           for (var hash : hashes)
-            receipts.add(notary.witness(hash));
+            receipts.add(notary.witness(hash, fromBlockNo));
         }
       } catch (Exception x) {
         HttpServerHelp.sendText(
@@ -389,6 +456,10 @@ public class ApiHandlers {
         status =
             receipts.stream().anyMatch(Predicate.not(Receipt::hasTrail)) ?
             202 : 200;
+
+        if (compress)
+          receipts = Lists.map(receipts, Receipt::compress);
+        
         json = parser.toJsonArray(receipts);
       }
       
@@ -452,12 +523,16 @@ public class ApiHandlers {
         int code = compressOpt.orElse(1);
         compress = code == 1;
       }
+
+      final long fromBlockNo = getFromBlockNo(queryMap, exchange);
+      if (fromBlockNo < 1L)
+        return;
       
       Crum crum = new Crum(hash, utc);
       
       Receipt rcpt;
       try {
-        rcpt = notary.update(crum);
+        rcpt = notary.update(crum, fromBlockNo);
       
       } catch (Exception x) {
         HttpServerHelp.sendText(
@@ -529,29 +604,8 @@ public class ApiHandlers {
         
       var queryMap = HttpServerHelp.queryMap(exchange);
 
-      var out = System.out;
-      out.println(getClass() + " - queryMap: " + queryMap);
-
-      List<String> blockNoStrings = queryMap.get(Constants.Rest.QS_BLOCK);
-      Long[] blockNos;
-      try {
-        if (blockNoStrings == null)
-          blockNos = new Long[] { };
-        else if (blockNoStrings.size() == 1)
-          blockNos = new Long[] { Long.parseLong(blockNoStrings.get(0)) };
-        else {
-          var bNos = new TreeSet<Long>();
-          blockNoStrings.forEach(s -> bNos.add(Long.parseLong(s)));
-          blockNos = bNos.toArray(new Long[bNos.size()]);
-          
-        }
-      } catch (NumberFormatException nfx) {
-        nfx.printStackTrace(System.err);
-        HttpServerHelp.sendBadRequest(
-          exchange,
-          "failed to parse block no.: " + nfx.getMessage());
-        return;
-      }
+      Long[] blockNos = getBlockNos(queryMap, exchange);
+      
 
       var includeLastOpt =
           HttpServerHelp.optionalBooleanValue(
@@ -598,13 +652,9 @@ public class ApiHandlers {
       if (compress)
         blockProof = blockProof.compress();
       
-      out.println(getClass() + " - blockProof:" + blockProof);
-      
       var json = BlockProofParser.forEncoding(encoding).toJsonObject(blockProof);
 
-      out.println(getClass() + " - json:" + json);
       HttpServerHelp.sendJson(exchange, 200, json);
-
     }
      
   }

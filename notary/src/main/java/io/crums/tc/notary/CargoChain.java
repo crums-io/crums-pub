@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import io.crums.io.DirectoryRemover;
 import io.crums.io.FileUtils;
+import io.crums.tc.BlockProof;
 import io.crums.tc.CargoProof;
 import io.crums.tc.ChainParams;
 import io.crums.tc.Crum;
@@ -370,8 +371,9 @@ public class CargoChain implements Channel {
    * not by existing cargo directories (whose block no.s may contain
    * gaps.)
    */
-  public Optional<Receipt> findReceipt(ByteBuffer hash) {
-    
+  public Optional<Receipt> findReceipt(ByteBuffer hash, long fromBlockNo) {
+
+    assertFromBlockNoPositive(fromBlockNo);
     if (hash.remaining() != HASH_WIDTH)
       throw new IllegalArgumentException("wrong hash width: " + hash);
     
@@ -389,7 +391,7 @@ public class CargoChain implements Channel {
       if (bd.blockNo() == stopCbNo)
         break;
       var block = toCargoBlock(bd);
-      var receipt = findReceipt(hash, block, commitNo);
+      var receipt = findReceipt(hash, block, commitNo, fromBlockNo);
       if (receipt != null)
         return Optional.of(receipt);
     }
@@ -399,6 +401,11 @@ public class CargoChain implements Channel {
   }
   
  
+  private void assertFromBlockNoPositive(long fromBlockNo) {
+    if (fromBlockNo <= 0)
+      throw new IllegalArgumentException(
+        "fromBlockNo must be positive; " + fromBlockNo);
+  }
   
   
   /**
@@ -407,16 +414,38 @@ public class CargoChain implements Channel {
    * @return  {@code null}, if not found
    */
   private Receipt findReceipt(
-      ByteBuffer hash, CargoBlock block, long commitNo) {
+      ByteBuffer hash, CargoBlock block, long commitNo, long fromBlockNo) {
+    
+    if (fromBlockNo > block.blockNo())
+      throw new IllegalArgumentException(
+        "fromBlockNo " + fromBlockNo + " > cargo block no. " + block.blockNo());
+    
     
     if (block.blockNo() <= commitNo) {
       
+      BlockProof blockProof;
+      {
+        Long[] blockNos;
+        if (fromBlockNo == block.blockNo())
+          blockNos = commitNo == fromBlockNo ?
+              new Long[] { fromBlockNo } :
+              new Long[] { fromBlockNo, commitNo };
+        else
+          blockNos = commitNo == block.blockNo() ?
+              new Long[] { fromBlockNo, commitNo } :
+              new Long[] { fromBlockNo, block.blockNo(), commitNo };
+  
+        blockProof = timechain.stateProof(false, blockNos);
+      }
+      
+
       switch (block.state()) {
       case MRKL:
         {
           CargoProof cargoProof = block.findCargoProof(hash);
           if (cargoProof != null) {
-            var blockProof = timechain.getBlockProof(block.blockNo());
+            // var blockProof = timechain.getBlockProof(block.blockNo());
+
             var crumtrail = Crumtrail.newMerkleTrail(blockProof, cargoProof);
             return new Receipt(crumtrail);
             
@@ -426,7 +455,7 @@ public class CargoChain implements Channel {
       case LONE:
         Crum crum = block.findLoneCommit();
         if (crum.hash().equals(hash)) {
-          var blockProof = timechain.getBlockProof(block.blockNo());
+          // var blockProof = timechain.getBlockProof(block.blockNo());
           var crumtrail = Crumtrail.newLoneTrail(blockProof, crum);
           return new Receipt(crumtrail);
         }
@@ -460,8 +489,10 @@ public class CargoChain implements Channel {
    * This method searches at most one cargo block.
    * </p>
    */
-  public Optional<Receipt> findCrumReceipt(Crum crum) {
+  public Optional<Receipt> findCrumReceipt(Crum crum, long fromBlockNo) {
     
+    assertFromBlockNoPositive(fromBlockNo);
+
     final long blockNo = chainParams.blockNoForUtcUnchecked(crum.utc());
     if (blockNo <= 0)
       return Optional.empty();
@@ -471,7 +502,7 @@ public class CargoChain implements Channel {
     
     var cargoBlock = getBlockIfPresent(blockNo, commitNo);
     if (cargoBlock != null) {
-      var rcpt = findReceipt(crum.hash(), cargoBlock, commitNo);
+      var rcpt = findReceipt(crum.hash(), cargoBlock, commitNo, fromBlockNo);
       if (rcpt != null)
         return Optional.of(rcpt);
     }

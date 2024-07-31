@@ -16,13 +16,20 @@ public interface NotaryService {
   NotaryPolicy policy();
 
 
+  Receipt witness(ByteBuffer hash, long fromBlockNo);
+
+
   /**
    * Witnesses the given {@code hash} and returns a receipt.
    * 
    * @param hash 32-bytes
    */
-  Receipt witness(ByteBuffer hash);
+  default Receipt witness(ByteBuffer hash) {
+    return witness(hash, 1L);
+  }
 
+
+  Receipt update(Crum crum, long fromBlockNo);
 
 
   /**
@@ -33,7 +40,9 @@ public interface NotaryService {
    * 
    * @see Receipt#crum()
    */
-  Receipt update(Crum crum);
+  default Receipt update(Crum crum) {
+    return update(crum, 1L);
+  }
 
 
 
@@ -52,8 +61,6 @@ public interface NotaryService {
    * Returns a hash proof linking the last block to the
    * given {@code target} block no., then linking the target
    * block no. to the genesis block.
-   * 
-   * @return {@code stateProof(true, 1L)}
    */
   default BlockProof stateProof(long target) {
     return target == 1L ?

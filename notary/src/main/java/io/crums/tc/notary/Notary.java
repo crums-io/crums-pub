@@ -296,8 +296,8 @@ public class Notary implements NotaryService, Channel {
    * </p>
    */
   @Override
-  public Receipt witness(ByteBuffer hash) {
-    return cargoChain.findReceipt(hash).orElseGet(
+  public Receipt witness(ByteBuffer hash, long fromBlockNo) {
+    return cargoChain.findReceipt(hash, fromBlockNo).orElseGet(
         () -> cargoChain.addCrum(new FreshCrum(hash)));
   }
   
@@ -311,9 +311,9 @@ public class Notary implements NotaryService, Channel {
    * since elapsed), then {@code witness(crum.hash())} is returned.
    */
   @Override
-  public Receipt update(Crum crum) {
-    return cargoChain.findCrumReceipt(crum).orElseGet(
-        () -> witness(crum.hash()));
+  public Receipt update(Crum crum, long fromBlockNo) {
+    return cargoChain.findCrumReceipt(crum, fromBlockNo).orElseGet(
+        () -> witness(crum.hash(), fromBlockNo));
   }
 
 
