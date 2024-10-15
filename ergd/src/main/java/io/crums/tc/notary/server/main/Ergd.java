@@ -24,7 +24,6 @@ import io.crums.tc.notary.d.NotaryD;
 import io.crums.tc.notary.server.NotaryLogger;
 import io.crums.tc.notary.server.UriHandler;
 import io.crums.util.TaskStack;
-import io.crums.util.json.JsonPrinter;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
@@ -43,7 +42,7 @@ import picocli.CommandLine.Spec;
     mixinStandardHelpOptions = true,
     version = "ergd 0.1",
     description = {
-      "Notary REST service configuration and launcher.%n",
+      "Timechain notary REST service configuration and launcher.%n",
     },
     subcommands = {
         HelpCommand.class,
