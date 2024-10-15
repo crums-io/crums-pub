@@ -18,6 +18,9 @@ import io.crums.util.json.simple.JSONObject;
  */
 public class NotaryPolicyParser implements JsonEntityParser<NotaryPolicy> {
 
+
+  public final static NotaryPolicyParser INSTANCE = new NotaryPolicyParser();
+
   
 
   @Override

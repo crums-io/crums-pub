@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.time.Duration;
 import java.util.Arrays;
 
@@ -25,19 +26,83 @@ import io.crums.tc.NotaryService;
 import io.crums.tc.Receipt;
 import io.crums.tc.except.NetworkException;
 import io.crums.tc.json.BlockProofParser;
+import io.crums.tc.json.NotaryPolicyParser;
 import io.crums.tc.json.ReceiptParser;
+import io.crums.util.json.JsonEntityReader;
 import io.crums.util.json.JsonParsingException;
 
 /**
  * HTTP REST client to a single server.
  */
-public class RemoteChain implements NotaryService {
+public class RemoteChain implements NotaryService, Channel {
 
+
+  /**
+   * Returns the given server address as a normalized URI.
+   * 
+   * @param scheme  {@code http} or {@code https}
+   * @param host    host name
+   * 
+   * @throws IllegalArgumentException  on malformed / illegal args
+   */
+  public static URI remoteURI(String scheme, String host) {
+    try {
+      URI uri = new URI(scheme.toLowerCase() + "//" + host.toLowerCase());
+      checkHostUri(uri);
+      return uri;
+    } catch (URISyntaxException usx) {
+      throw new IllegalArgumentException(
+        "illegal syntax: " + usx.getMessage());
+    }
+  }
+
+
+
+  public static URI remoteURI(String hostUrl) {
+    try {
+      URI uri = new URI(hostUrl);
+      checkHostUri(uri);
+      return uri;
+    } catch (URISyntaxException usx) {
+      throw new IllegalArgumentException(
+        "illegal syntax: " + usx.getMessage());
+    }
+  }
+
+  /**
+   * Returns the given server address as a normalized URI.
+   * 
+   * @param scheme  {@code http} or {@code https}
+   * @param host    host name
+   * @param port    positive port number
+   * 
+   * 
+   * @throws IllegalArgumentException  on malformed / illegal args
+   */
+  public static URI remoteURI(String scheme, String host, int port) {
+    try {
+      URI uri = new URI(
+        scheme.toLowerCase() + "://" + host.toLowerCase() + ":" + port);
+      checkHostUri(uri);
+      return uri;
+    } catch (URISyntaxException usx) {
+      throw new IllegalArgumentException(
+        "illegal syntax: " + usx.getMessage());
+    }
+  }
+
+  private volatile boolean open = true;
 
   private final String hostUrl;
 
 
   private final HttpClient httpClient;
+
+
+  /** Request timeout in seconds. */
+  private int timeout = 15;
+
+  private boolean compress;
 
 
   
@@ -46,18 +111,23 @@ public class RemoteChain implements NotaryService {
   }
 
 
-  
-  public RemoteChain(String scheme, String host) {
-    try {
-      URI uri = new URI(scheme.toLowerCase() + "//" + host.toLowerCase());
-      checkHostUri(uri);
-      this.hostUrl = uri.toString();
-    } catch (URISyntaxException usx) {
-      throw new IllegalArgumentException(
-        "illegal syntax: " + usx.getMessage());
-    }
+  private RemoteChain(String hostUrl) {
+    this.hostUrl = hostUrl;
     this.httpClient = buildClient();
   }
+  
+  public RemoteChain(String scheme, String host) {
+    this.hostUrl = remoteURI(scheme, host).toString();
+    this.httpClient = buildClient();
+  }
+
+
+
+
+
+
+
+
 
 
   /**
@@ -68,27 +138,22 @@ public class RemoteChain implements NotaryService {
    * @param port    positive port number
    */
   public RemoteChain(String scheme, String host, int port) {
-    try {
-      URI uri = new URI(
-        scheme.toLowerCase() + "//" + host.toLowerCase() + ":" + port);
-      checkHostUri(uri);
-      this.hostUrl = uri.toString();
-    } catch (URISyntaxException usx) {
-      throw new IllegalArgumentException(
-        "illegal syntax: " + usx.getMessage());
-    }
+    this.hostUrl = remoteURI(scheme, host, port).toString();
     this.httpClient = buildClient();
   }
 
 
+
+
   public RemoteChain(URI host) {
-    this.hostUrl = host.toString();
+    this.hostUrl = host.toString().toLowerCase();
     checkHostUri(host);
     this.httpClient = buildClient();
   }
 
 
-  private void checkHostUri(URI host) {
+
+  public static void checkHostUri(URI host) {
     if (!host.isAbsolute())
       throw new IllegalArgumentException(
         "host URI must be absolute: " + host);
@@ -99,37 +164,62 @@ public class RemoteChain implements NotaryService {
     if (host.getHost() == null)
       throw new IllegalArgumentException(
         "host URI has no host: " + host);
-    if (host.getRawPath() != null)
+    var path = host.getRawPath();
+    if (path != null && !path.isEmpty() && !path.equals("/"))
       throw new IllegalArgumentException(
         "host URI must not specify a path: " + host);
   }
 
 
+  public URI hostURI() {
+    try {
+      return new URI(hostUrl);
+    } catch (URISyntaxException usx) {
+      throw new RuntimeException(
+        "assertion failure (should never happen): " + usx.getMessage());
+    }
+  }
+
+  public RemoteChain defaultCompression(boolean on) {
+    compress = on;
+    return this;
+  }
+
+  public boolean defaultCompression() {
+    return compress;
+  }
+
+
+  public int timeout() {
+    return timeout;
+  }
+
+  public RemoteChain timeout(int seconds) {
+    if (seconds <  1)
+      throw new IllegalArgumentException(
+          "attempt to set timeout to " + seconds + " seconds");
+    this.timeout = seconds;
+    return this;
+  }
+
+
+
+
 
   @Override
   public NotaryPolicy policy() throws NetworkException {
-    // TODO
-    return null;
-  }
-
-
-  @Override
-  public Receipt witness(ByteBuffer hash, long fromBlockNo) throws NetworkException {
-    String url =
-        hostUrl + Constants.Rest.WITNESS_URI + '?' +
-        Constants.Rest.QS_HASH + '=' +
-        HashEncoding.BASE64_32.encode(hash);
-
-    return fetchReceipt(url);
+    String url = hostUrl + Constants.Rest.POLICY_URI;
+    return fetchEntity(url, NotaryPolicyParser.INSTANCE);
   }
 
 
 
-  private Receipt fetchReceipt(String url) throws NetworkException {
+  private <T> T fetchEntity(String url, JsonEntityReader<T> parser) {
 
-    HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create(url))
-        .timeout(Duration.ofMinutes(1)).GET().build();
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .timeout(Duration.ofSeconds(timeout)).GET().build();
 
     try {
 
@@ -149,7 +239,7 @@ public class RemoteChain implements NotaryService {
             body);
       }
 
-      return ReceiptParser.B64.toEntity(body);
+      return parser.toEntity(body);
       
 
     } catch (IOException iox) {
@@ -164,15 +254,73 @@ public class RemoteChain implements NotaryService {
     }
   }
 
+
+
+  /**
+   * Same as {@linkplain #witness(ByteBuffer, long)} interface method, but with
+   * the <em>compression</em> option exposed.
+   */
+  public Receipt witness(
+      ByteBuffer hash, long fromBlockNo, boolean compress)
+        throws NetworkException {
+    
+    String url =
+        hostUrl + Constants.Rest.WITNESS_URI + '?' +
+        Constants.Rest.QS_HASH + '=' +
+        HashEncoding.BASE64_32.encode(hash);
+
+    url = appendQs(url, fromBlockNo, compress);
+
+    return fetchReceipt(url);
+  }
+
+
+
+  private String appendQs(String url, long fromBlockNo, boolean compress) {
+    if (fromBlockNo > 1L)
+      url += "&" + Constants.Rest.QS_BLOCK + '=' + fromBlockNo;
+
+    else if (fromBlockNo != 1L)
+      throw new IllegalArgumentException(
+          "out-of-bounds fromBlockNo: " + fromBlockNo);
+    
+    if (!compress)
+      url += "&" + Constants.Rest.COMPRESS + "=0";
+
+    return url;
+  }
+
+
+  @Override
+  public Receipt witness(ByteBuffer hash, long fromBlockNo)
+      throws NetworkException {
+
+    return witness(hash, fromBlockNo, compress);
+  }
+
+
+
+  private Receipt fetchReceipt(String url) throws NetworkException {
+    return fetchEntity(url, ReceiptParser.B64);
+  }
+
   
   @Override
   public Receipt update(Crum crum, long fromBlockNo) throws NetworkException {
-    
+    return update(crum, fromBlockNo, compress);
+  }
+
+
+
+  public Receipt update(Crum crum, long fromBlockNo, boolean compress) throws NetworkException {
+
     String url =
         hostUrl + Constants.Rest.UPDATE_URI + '?' +
         Constants.Rest.QS_UTC + '=' + crum.utc() + '&' +
         Constants.Rest.QS_HASH + '=' +
         HashEncoding.BASE64_32.encode(crum.hash());
+
+    url = appendQs(url, fromBlockNo, compress);
 
     return fetchReceipt(url);
   }
@@ -213,46 +361,47 @@ public class RemoteChain implements NotaryService {
             .append("false");
     }
 
+    if (!compress)
+      url.append('&')
+          .append(Constants.Rest.COMPRESS)
+          .append('=').append('0');
+
 
     final var surl = url.toString();
 
-    HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create(surl))
-        .timeout(Duration.ofMinutes(1)).GET().build();
+    return fetchEntity(surl, BlockProofParser.B64);
+  }
 
-    try {
 
-      HttpResponse<String> response =
-          httpClient.send(request, BodyHandlers.ofString());
-      
-      final var body = response.body();
-
-      observeResponse(surl, body);
-
-      {
-        int status = response.statusCode() ;
-        
-        if (response.statusCode() != 200)
-          throw new NetworkException(
-            "HTTP status code " + status + " from " + url + "\n" +
-            body);
-      }
+  /** Closes the HTTP client. Exceptions warned on std err; not thrown. */
+  @Override
+  public void close() {
+    this.open = false;
+    // try {
+    //   // FIXME: the following is *supposed to be in the API, but the
+    //   // version loaded in JDK 22 (i.e. sans pom dep declaration) has
+    //   // no such method: commented out
+    //   this.httpClient.close();
+    // } catch (Exception x) {
+    //   System.err.println(
+    //       "[WARNING] ignoring error on shutting down HTTP client: " +
+    //       x.getMessage());
+    // }
+  } 
 
 
 
-      return BlockProofParser.B64.toEntity(body);
-      
+  @Override
+  public boolean isOpen() {
+    return open;
+  }
 
-    } catch (IOException iox) {
-      throw new NetworkException(
-        "i/o error on attempting " + url + " - cause: " + iox.getMessage(), iox);
-    } catch (InterruptedException ix) {
-      throw new NetworkException(
-        "interrupted on attempting " + url, ix);
-    } catch (JsonParsingException jpx) {
-      throw new NetworkException(
-        "failed on parsing JSON: " + jpx.getMessage(), jpx);
-    }
+
+
+  public RemoteChain reboot() {
+    if (isOpen())
+      throw new IllegalStateException("instance is still open");
+    return new RemoteChain(this.hostUrl);
   }
 
 

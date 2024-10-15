@@ -54,6 +54,51 @@ public class BlockProof implements Serial {
   }
 
 
+  /**
+   * Returns an abbreviated version of this block proof connecting the given
+   * block to the highest block no in this proof.
+   * 
+   * @param bn  block no
+   * @return    empty, if the given block no. is not contained in this
+   *            block proof
+   */
+  public Optional<BlockProof> forBlockNo(long bn) {
+    return forBlockNo(bn, false);
+  }
+
+
+
+  /**
+   * Returns an abbreviated version of this block proof connecting the given
+   * block to the highest block no in this proof.
+   * 
+   * @param bn            block no
+   * @param withLineage   if {@code true}, then the returned proof (if any)
+   *                      will include a path from the first known block in this
+   *                      proof to the block numbered {@code bn}.
+   * @return    empty, if the given block no. is not contained in this
+   *            block proof
+   */
+  public Optional<BlockProof> forBlockNo(long bn, boolean withLineage) {
+    if (!chainState.hasRow(bn))
+      return Optional.empty();
+    if (isCompressed())
+      return Optional.empty();
+    Path abbreviatedState;
+    if (withLineage)
+      abbreviatedState = chainState.skipPath(bn).get();
+    else if (bn == blockNo())
+      abbreviatedState = chainState.skipPath();
+    else
+      abbreviatedState = chainState.skipPath(true, bn, chainState.hi()).get();
+    
+    return Optional.of(
+        abbreviatedState.length() == chainState.length() ?
+            this :
+            new BlockProof(params, abbreviatedState, chainId));
+  }
+
+
 
   /**
    * Tells whether the {@linkplain #chainState() chain state} is compressed.
@@ -75,6 +120,19 @@ public class BlockProof implements Serial {
         isCompressed() ?
             this :
             new BlockProof(params, chainState.compress(), chainId);
+  }
+
+
+  /**
+   * Determines whether this instances uses <em>condensed</em> information
+   * about its hash pointers. Usually (but not always), to be
+   * {@linkplain #isCompressed() compressed}, an instance must also be
+   * condensed.
+   * 
+   * @return {@code chainState().isCondensed()}
+   */
+  public final boolean isCondensed() {
+    return chainState.isCondensed();
   }
 
 
@@ -147,13 +205,19 @@ public class BlockProof implements Serial {
    * @return  the highest block no, or zero, if the 2 instances do not
    *          intersect
    * 
-   * @throws HashConflictException if the hashes at the highest known block no.s
+   * @throws HashConflictException if the hashes at the highest common block no.s
    *                               for the 2 instances conflict
+   * @throws IllegalArgumentException
+   *                    if the 2 instances' {@linkplain #chainParams()} conflict
    * @see #extendTarget(long, BlockProof)
    * @see #highestCommonBlockNo(Path)
    */
   public final long highestCommonBlockNo(BlockProof other)
       throws HashConflictException {
+
+    if (!params.equalParams(other.params))
+        throw new IllegalArgumentException(
+          "chain params mismatch: " + params + " v. " + other.params);
 
     return highestCommonBlockNo(other.chainState);
   }

@@ -44,11 +44,12 @@ public class HashUtc {
   public final static long INCEPTION_UTC = 1712361600000L; // 1712361600
   
   /**
-   * As a sanity check on data, the maximum UTC is bounded by 100 years from inception.
+   * As a sanity check on data, the maximum UTC is bounded by 100 years since startup.
+   * (If you don't restart the app once a century, it will crash.)
    * 
    * @see #INCEPTION_UTC
    */
-  public final static long RUN_MAX_UTC = INCEPTION_UTC + 100L * 365 * 24 * 3600 * 1000;
+  public final static long RUN_MAX_UTC = System.currentTimeMillis() + 100L * 365 * 24 * 3600 * 1000;
   
   /**
    * Data size is {@linkplain Constants#HASH_WIDTH} + {@linkplain Long#BYTES}.

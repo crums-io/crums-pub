@@ -4,465 +4,324 @@
 package io.crums.tc.client;
 
 
-import static io.crums.tc.json.JsonTags.BLOCK_PROOF;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import io.crums.io.FileUtils;
-import io.crums.io.Opening;
-import io.crums.io.SerialFormatException;
-import io.crums.io.channels.ChannelUtils;
 import io.crums.sldg.HashConflictException;
+import io.crums.sldg.Path;
 import io.crums.stowkwik.io.HexPathTree;
 import io.crums.tc.BlockProof;
+import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
 import io.crums.util.IntegralStrings;
-import io.crums.util.Lists;
 import io.crums.util.RandomId;
 
+
 /**
- * Local repo for crumtrails from a <em>single</em> timechain. To the
- * degree feasible, this aims to be resilient against concurrent writers
- * so that it'd be suitable to access based on a user's home-directory,
- * for e.g.
+ * Local repo for crumtrails from a <em>single</em> timechain.
+ * 
+ * <h2>Assumptions</h2>
+ * 
+ * <ol>
+ * <li><em>Sequential Writes.</em></li>
+ * <li><em>Uncondensed Crumtrails.</em></li>
+ * <li><em>Concurrent Reads.</em> </li>
+ * </ol>
+ * 
+ * <h2>Basic Design</h2>
  * <p>
- * Note to self: don't be too cute with optimizations; we're on the
- * client side and we're i/o bound in so many places, it's hard to
- * know which ones matter ahead of testing.
+ * It's maybe easiest to describe in two parts: writing and reading,
+ * in that order..
+ * </p>
+ * <h3>Writing</h3>
+ * <p>
+ * Crumtrails are keyed by the witnessed hash ({@linkplain Crum#hash()})
+ * using a filepath naming scheme called a hex tree (similar to how git
+ * does it). When a crumtrail is saved ({@linkplain #add(Crumtrail)}),
+ * first the repo's "global" chain [block] proof is updated (up to the
+ * block no. of the crumtrail). Barring any hash conflicts in the 1st step,
+ * the crumtrail is next saved (in binary format) in a file under the hex tree.
+ * </p>
+ * <h3>Reading / Lookup</h3>
+ * <p>
+ * Finding and returnng crumtrail for a witnessed hash is also a 2 step
+ * process. First, a crumtrail for that hash is looked up and loaded
+ * from the hex tree directory structure. Second, assuming it was found,
+ * the loaded crumtrail is updated with the chain's latest block proof
+ * before being returned.
+ * </p>
+ * <h4>Some Details</h4>
+ * <p>
+ * All files are <em>write-once</em>; furthermore, all file-writes are
+ * <em>staged</em>.
+ * The precise rule for concurrency is that the repo's global chain block
+ * proof (hereafter <em>chain</em>) can only ever be appended. Altho this
+ * class is strict about enforcing these rules, it's also a goal to make it
+ * this enforcement process agnostic.
+ * </p><p>
+ * The "current" chain file (the global block proof) is represented by a
+ * numbered file encoding its last (highest) recorded timechain block.
+ * Since successive chain files include all ancestor data, lower numbered
+ * chain files can be removed without loss of information. (There are
+ * race condition checks to be made before deleting these.)
  * </p>
  */
-public class TrailRepo implements AutoCloseable {
+public class TrailRepo {
 
-  public final static int DEFAULT_TBN_MAX_LOOKBACK = 3;
 
-  public final static String PURGED_EXT = ".purg";
-  public final static String CARGO_PROOF_EXT = ".ccp";
-  public final static String BLOCK_PROOF_EXT = ".tbp";
-  public final static String TBN_FILE = "TBN";
-  public final static String MAIN_STATE_PREFIX = "main";
+  public final static String CARGO_PROOF_EXT = ".crums";
+  public final static String BLOCK_PROOF_EXT = ".chain";
 
+  private final static int CPX_LEN = CARGO_PROOF_EXT.length();
 
   /** Staging directory name. */
   public final static String STAGING = "staging";
 
-  private final Object tbnLock = new Object();
+
+  private final static FilenameFilter CHAIN_FILTER =
+      new FilenameFilter() {
+        @Override public boolean accept(File dir, String name) {
+          return name.endsWith(CARGO_PROOF_EXT);
+        }
+      };
+
 
   protected final File dir;
-  protected final String chainExt;
-  protected final HexPathTree trailTree;
   protected final File stagingDir;
-
-  private FileChannel tbn;
-
-  protected final FileChannel tbn() {
-    synchronized (tbnLock) {
-      if (tbn == null) {
-        try {
-          tbn = Opening.CREATE_ON_DEMAND.openChannel(tbnFile());
-        } catch (IOException iox) {
-          throw new UncheckedIOException(iox);
-        }
-      }
-      return tbn;
-    }
-  }
-
-  protected final void closeTbn() {
-    synchronized (tbnLock) {
-      if (tbn == null)
-        return;
-      
-      try {
-        tbn.close();
-      } catch (IOException gulp) { }
-      tbn = null;
-    }
-  }
+  protected final HexPathTree trailTree;
 
 
-
-
-  
 
   public TrailRepo(File dir) {
-    this(dir, dir, BLOCK_PROOF_EXT, CARGO_PROOF_EXT);
-  }
-
-
-  protected TrailRepo(
-      File dir, File cargoDir, String chainExt, String cargoExt) {
     this.dir = dir;
-    this.chainExt = chainExt;
     this.stagingDir = FileUtils.ensureDir(new File(dir, STAGING));
-    this.trailTree = new HexPathTree(cargoDir, cargoExt);
+    this.trailTree = new HexPathTree(dir, CARGO_PROOF_EXT);
   }
 
 
-  @Override
-  public void close() {
-    closeTbn();
+  /**
+   * Directory this instance lives in.
+   */
+  public final File dir() {
+    return dir;
   }
 
 
+  /**
+   * Finds and returns a crumtrail without lineage.
+   * 
+   * @param hash        32-byte hash
+   * 
+   * @return {@code findTrail(hash, false)}
+   * 
+   * @see #findTrail(ByteBuffer, boolean)
+   */
+  public Optional<Crumtrail> findTrail(ByteBuffer hash) {
+    return findTrail(hash, false);
+  }
 
-  protected boolean deleteBlockProof(File file) {
-    if (!file.getName().endsWith(BLOCK_PROOF))
-      throw new IllegalArgumentException(
-          "expected " + BLOCK_PROOF + " file; actual given: " + file);
+  /**
+   * Finds and returns a crumtrail for the given 32-byte hash.
+   * 
+   * @param hash        32-byte hash
+   * @param incLineage  if {@code true} the trail's lineage from the genesis block
+   *                    is included
+   */
+  public Optional<Crumtrail> findTrail(ByteBuffer hash, boolean incLineage) {
+    if (hash.remaining() != Constants.HASH_WIDTH)
+      throw new IllegalArgumentException("illegal hash length: " + hash);
     
-    return delete(file);
-  }
-
-  private final static int PURGE_MOVE_ATTEMPTS = 2;
-
-
-  private boolean delete(File file) {
-    int attemptsRemaining = PURGE_MOVE_ATTEMPTS;
-    File target = purgeFilepath(file);
-    while (file.exists() && attemptsRemaining-- > 0)
-      if (file.renameTo(target))
-        break;
+    String hex = IntegralStrings.toHex(hash);
+    File trailFile = trailTree.find(hex);
+    if (trailFile == null)
+      return Optional.empty();
     
-    // if it moved, then it's logically deleted
-    final boolean moved = attemptsRemaining >= 0;
-    if (moved)
-      target.delete();  // attempt an actual delete
-    
-    return moved;
-  }
+    Crumtrail trail = Crumtrail.load(FileUtils.loadFileToMemory(trailFile));
+    // sanity check
+    if (!trail.crum().hash().equals(hash))
+      throw new IllegalStateException(
+          "crum hash conflicts for hex path " + trailFile);
 
-  private final static int MAX_NUMBERED_PURGE = 16;
+    final long tbn = trail.blockNo();
+    var chainState = chainState();
+    var blockProof = chainState.forBlockNo(tbn, incLineage)
+        .orElseThrow(() -> new IllegalStateException(
+            "chain block proof [" + chainState.blockNo() +
+            "] does not contain trail block [" + trail.blockNo() + "] for " +
+            trail.crum()));
 
-  private File purgeFilepath(File file) {
-    for (int index = 0; index < MAX_NUMBERED_PURGE; ++index) {
-      File target = purgeFilepath(file, index);
-      if (!target.exists())
-        return target;
-    }
-    throw new IllegalStateException(
-      "too many " + PURGED_EXT + " files for " + file);
-  }
-
-  private File purgeFilepath(File file, int index) {
-    String prefix = file.getName();
-    if (index > 0)
-      prefix += "." + index;
-    return new File(file.getParentFile(), prefix + PURGED_EXT);
-  }
-
-
-
-  protected boolean recordTargetBlockNo(long blockNo) throws IOException {
-    return recordTargetBlockNo(blockNo, DEFAULT_TBN_MAX_LOOKBACK);
-  }
-
-
-  protected boolean recordTargetBlockNo(long blockNo, int maxLookback)
-      throws IOException {
-    
-    assert blockNo > 0;
-    assert maxLookback >= 0;
-    var blockNos = targetBlockNos();
-    final int lastIndex = Math.max(0, blockNos.size() - maxLookback);
-    for (int index = blockNos.size(); index-- > lastIndex; ) {
-      long bn = blockNos.get(index);
-      if (bn <= 0)
-        throw new SerialFormatException(
-          "block no. " + bn + " at index [" + index + "]");
-      if (bn == blockNo)
-        return false;
-    }
-
-    long pos = tbnOffset(tbnCount());
-    var cell = ByteBuffer.allocate(8).putLong(blockNo).flip();
-    ChannelUtils.writeRemaining(tbn, pos, cell);
-    return true;
-  }
-
-
-
-  protected List<Long> targetBlockNos() {
-    try {
-      return Lists.functorList(tbnCount(), this::getTargetBlockNo);
-    
-    } catch (IOException iox) {
-      throw new UncheckedIOException(iox);
-    }
-  }
-
-
-
-
-
-  private long tbnOffset(int index) {
-    return index * 8L;
-  }
-
-
-  private long getTargetBlockNo(int index) {
-    try {
-      var cell = ByteBuffer.allocate(8);
-      long pos = tbnOffset(index);
-      long blockNo = ChannelUtils.readRemaining(tbn, pos, cell).flip().getLong();
-      assert blockNo > 0;
-      return blockNo;
-    } catch (IOException iox) {
-      throw new UncheckedIOException(
-        "on index " + index + ": " + iox.getMessage(), iox);
-    }
-  }
-
-
-  protected int tbnCount() throws IOException {
-    int count = (int) (tbn.size() / 8L);
-    assert count >= 0;
-    return count;
-  }
-
-
-
-  /** Invoked <em>after</em> {@link #highestCommon(BlockProof)} */
-  protected boolean saveChainState(BlockProof state, long tbn)
-      throws HashConflictException, UncheckedIOException {
-    
-    highestCommon(state);
-
-
-    File target = proposeStateFile(state);
-    File staged = newStagedFile(target.getName());
-    FileUtils.writeNewFile(staged, state.serialize());
-    return staged.renameTo(target);
-  }
-
-
-
-  
-
-
-  protected File tbnFile() {
-    return new File(dir, TBN_FILE);
+    return Optional.of(trail.setBlockProof(blockProof));
   }
 
 
 
   /**
-   * Returns the 
-   * @param state
-   * @return
+   * Adds the given crumtrail to the repo. Crumtrails are assumed to be added
+   * in order of creation.
+   * 
+   * @param trail   the new trail
+   * 
    * @throws HashConflictException
+   *          if the given trail block hashes conflict with those of the
+   *          timechain recorded in this repo
+   *          
    */
-  protected long highestCommon(BlockProof state) throws HashConflictException {
+  public void add(Crumtrail trail) throws HashConflictException {
+    if (trail.isCondensed())
+      throw new IllegalArgumentException("condensed crumtrail " + trail);
 
-    return getHcbn(state).highestCommonBlockNo();
-  }
-
-
-  protected Hcbn getHcbn(BlockProof state) throws HashConflictException {
-
-    long hbn = 0L;
-    BlockProof blockProof = null;
-    for (var bp : listBlockProofs()) {
-      long bn = state.highestCommonBlockNo(bp);
-      if (bn > hbn) {
-        hbn = bn;
-        blockProof = bp;
-      } else if (
-          bn == hbn &&
-          bn != 0 &&
-          blockProof.blockNo() < bp.blockNo()) {
-
-        blockProof = bp;
-      }
+    var repoChain = chainState();
+    if (repoChain == null) {
+      init(trail);
+      return;
     }
-    return new Hcbn(hbn, blockProof);
-  }
 
+    // Update the repo's block proof, first
 
-  protected record Hcbn(long highestCommonBlockNo, BlockProof blockProof) {
-    protected Hcbn {
+    var trailChain = trail.blockProof();
+
+    final long trailBn = trail.blockNo();
+    final long repoBn = repoChain.blockNo();
+
+    if (trailBn < repoBn) {
       
-      if (blockProof == null) {
-
-        if (highestCommonBlockNo != 0)
-          throw new IllegalArgumentException(
-            "non-zero highestCommonBlockNo (" + highestCommonBlockNo +
-            ") with non-null blockProof");
+      if (!repoChain.chainState().hasRow(trailBn))
+        throw new IllegalArgumentException(
+            "trail block [" + trailBn +
+            "] is (behind and) not contained in repo " + this +
+            "'s block proof ending at block [" + repoBn + "]");
       
-      } else if (highestCommonBlockNo <= 0) {
-
-        var msg = highestCommonBlockNo == 0 ?
-            "blockProof must be null with highestCommonBlockNo set to zero" :
-            "negative highestCommonBlockNo: " + highestCommonBlockNo;
-        throw new IllegalArgumentException(msg);
-      } 
-    }
-  }
-
-
-
-
-  public Crum saveTrail(Crumtrail trail)
-      throws HashConflictException, UncheckedIOException {
-
-    highestCommon(trail.blockProof());
-
-    var hash = trail.crum().hash();
-    var hex = IntegralStrings.toHex(hash);
-    File crumFile = trailTree.find(hex);
-
-    if (crumFile != null)
-        return verifyCrumtrail(crumFile, trail);
-    
-    
-    File target = trailTree.suggest(hex);
-    File staging = newStagedFile(target.getName());
-    
-    try (var ch = Opening.CREATE.openChannel(staging)) {
+      assertBlockHash(repoChain, trailChain, trailBn);
       
-      ChannelUtils.writeRemaining(ch, trail.serialize());
+      // otherwise, thump up
 
+    } else if (trailBn > repoBn) {
 
-      if (!staging.renameTo(target)) {
-        if (target.exists())
-          return verifyCrumtrail(target, trail);
-        
-        throw new IoException(
-            "failed to move staged file: " + staging + " --> " + target);
-      }
-    
-    } catch (IOException iox) {
-      throw new UncheckedIOException("on writing " + staging, iox);
-    }
-        
-    try {
-      recordTargetBlockNo(trail.blockNo()); // not checking return value
-                                            // cuz if previously failed at next
-                                            // step, wanna make progress
+      // following throws HCE on mismatched hashes
+      // or IAE on mismatched chain params..
+
+      final long hcbn = trailChain.highestCommonBlockNo(repoChain);
+      if (hcbn == 0)
+        throw new IllegalArgumentException(
+          "trail chain (block proof) does not intersect with " +
+          "chain recorded in repo " + this);
+
+      if (hcbn != repoBn)
+        throw new IllegalArgumentException(
+          "block proof in trail does not reference block [" +
+          repoBn + "], the last block in repo " + this);
 
       
-    } catch (IOException iox) {
-      throw new UncheckedIOException(
-          "on writing TBN [" + trail.blockNo() + "]: " + iox.getMessage(), iox);
+
+      Path newStatePath =
+          repoChain.chainState().appendTail(
+              trailChain.chainState().headPath(trail.blockNo() + 1));
+
+      var newChain = new BlockProof(repoChain.chainParams(), newStatePath);
+      writeChain(newChain);
+
+    } else {
+
+      // assert trailBn == repoBn;
+      assertBlockHash(repoChain, trailChain, trailBn);
     }
 
+    // any necessary update to the chain's block proof is completed
 
-    return trail.crum();
-  }
-
-  /** Workaround UncheckedIOException not taking null as cause. */
-  private static class IoException extends UncheckedIOException {
-    public IoException(String msg) {
-      this(msg, new IOException());
-    }
-    private IoException(String msg, IOException dummy) {
-      super(msg, dummy);
-    }
-  }
-
-
-
-  /**
-   * Verifies the new trail against an existing crumtrail file.
-   * 
-   * @param trailFile   existing crumtrail file
-   * @param trail       input trail
-   * @return            the crum in the existing trail file
-   * 
-   * @throws SerialFormatException  if the wrong crum hash in {@code trailFile}
-   * 
-   */
-  private Crum verifyCrumtrail(File trailFile, Crumtrail trail)
-      throws SerialFormatException {
-
-    var mem = FileUtils.loadFileToMemory(trailFile);
-    var trailOfRecord = Crumtrail.load(mem);
-
-    if (!trail.crum().hash().equals(trailOfRecord.crum().hash()))
-      throw new SerialFormatException(
-        "corrupted (wrong hash): " + trailFile);
-
-    return trailOfRecord.crum();
+    writeTrail(trail);
   }
 
 
-  private final static int MAX_CRNS = 4;
-  private final static int MAX_NUM_DOTTED_STATE_FILES = 16;
 
-  protected File proposeStateFile(BlockProof state) {
+  private void assertBlockHash(
+      BlockProof repoChain, BlockProof trailChain, long blockNo) {
     
-    var crns = Lists.reverse(state.chainState().pack().preStitchRowNos());
-    final int maxCrns = Math.min(crns.size(), MAX_CRNS);
+    if (!repoChain.chainState().getRowHash(blockNo).equals(
+        trailChain.chainState().getRowHash(blockNo)))
 
-    String prefix = Long.toString(crns.get(0));
-    File file = new File(dir, prefix + chainExt);
-    if (!file.exists())
-      return file;
+      throw new HashConflictException("at block [" + blockNo + "]");
+  }
 
-    for (int index = 1; index < maxCrns; ++index) {
 
-      prefix += '-' + crns.get(index);
-      file = new File(dir, prefix + chainExt);
-      if (!file.exists())
-        return file;
+  private void init(Crumtrail trail) {
+    final long tbn = trail.blockNo();
+    BlockProof chain;
+    if (tbn != trail.blockProof().blockNo()) {
+      var statePath = trail.blockProof().chainState().headPath(tbn + 1);
+      assert statePath.hiRowNumber() == tbn;
+      chain = new BlockProof(trail.chainParams(), statePath);
+    } else {
+      chain = trail.blockProof();
     }
-
-    for ( int postPrefix = 1;
-          postPrefix < MAX_NUM_DOTTED_STATE_FILES;
-          ++postPrefix) {
-      
-      var name = prefix + '.' + postPrefix + chainExt;
-      file = new File(dir, name);
-      if (file.exists())
-        return file;
-    }
-    throw new IllegalStateException(
-        "too many dot-number state files for " + prefix + chainExt);
+    writeChain(chain);
+    writeTrail(trail);
   }
 
 
 
+  private boolean writeChain(BlockProof chain) {
+    File chainFile = chainFile(chain.blockNo());
+    File staged = newStagedFile(chainFile.getName());
+    FileUtils.writeNewFile(staged, chain.serialize());
+    return commitStaged(staged, chainFile);
+  }
+
+
+
+  private boolean writeTrail(Crumtrail trail) {
+    var hex = trail.crum().hashHex();
+    File trailFile = trailTree.suggest(hex);
+    File staged = newStagedFile(trailFile.getName());
+    FileUtils.writeNewFile(staged, trail.serialize());
+    return commitStaged(staged, trailFile);
+  }
   
 
-
-  public List<BlockProof> listBlockProofs() {
-    List<File> stateFiles = listBlockFiles();
-    if (stateFiles.isEmpty())
-      return List.of();
-    
-    var blockProofs = new BlockProof[stateFiles.size()];
-    for (int index = blockProofs.length; index-- > 0; )
-      blockProofs[index] = loadBlockProof(stateFiles.get(index));
-    
-    return Lists.asReadOnlyList(blockProofs);
+ 
+  protected final File chainFile(long tbn) {
+    return new File(dir, tbn + BLOCK_PROOF_EXT);
   }
 
 
 
-  protected List<File> listBlockFiles() {
-    File[] stateFiles = dir.listFiles(new FilenameFilter() {
-      @Override public boolean accept(File dir, String name) {
-        return name.endsWith(chainExt);
-      }
-    });
-    return Lists.asReadOnlyList(stateFiles);
+  protected List<Long> listChainFilesNos() {
+    return chainNos().toList();
   }
 
 
-  
+  private Stream<Long> chainNos() {
+    return
+        Arrays.asList(dir.list(CHAIN_FILTER)).stream()
+        .map(s -> s.substring(0, s.length() - CPX_LEN))
+        .map(Long::parseLong);
+  }
 
-  
+
+  public BlockProof chainState() {
+    return chainNos().max(Long::compare).map(this::loadChain).orElse(null);
+  }
+
+
+  public long blockNo() {
+    long bn = chainNos().max(Long::compare).orElse(0L);
+    assert bn == 0 || chainState().blockNo() == bn;
+    return bn;
+  }
 
 
 
-  private BlockProof loadBlockProof(File stateFile) {
-    var mem = FileUtils.loadFileToMemory(stateFile);
+  private BlockProof loadChain(long tbn) {
+    var mem = FileUtils.loadFileToMemory(chainFile(tbn));
     return BlockProof.load(mem);
   }
 
@@ -471,4 +330,33 @@ public class TrailRepo implements AutoCloseable {
     return new File(stagingDir, RandomId.RUN_INSTANCE + "_" + postfixName);
   }
 
+
+  private boolean commitStaged(File staged, File target) {
+    if (staged.renameTo(target))
+      return true;
+    
+    if (!target.exists())
+      throw new UncheckedIOException(
+          "failed to commit (rename/move) to " + target,
+          new IOException());
+
+    return false;
+  }
+
+
+
+
+
+
+
+  @Override
+  public String toString() {
+    return "<" + dir.getName() + ">";
+  }
+
+
 }
+
+
+
+

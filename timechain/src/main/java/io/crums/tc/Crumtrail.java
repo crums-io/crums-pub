@@ -6,12 +6,12 @@ package io.crums.tc;
 
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Objects;
 
 import io.crums.io.Serial;
 import io.crums.io.SerialFormatException;
 import io.crums.io.buffer.BufferUtils;
+import io.crums.sldg.HashConflictException;
 import io.crums.sldg.Path;
 import io.crums.tc.except.BlockNotFoundException;
 import io.crums.tc.except.CargoConflictException;
@@ -32,6 +32,10 @@ import io.crums.tc.except.TimeChainException;
  * The {@linkplain CargoProof} class ought to implement the logic of
  * both a merkle tree and a crum's straight hash (what this class
  * does). Punting for now, in the interest of time.
+ * </p><p>
+ * The cleanest way to fix this is to modify the merkle-tree library so
+ * that root hash of a singleton tree is the item itelf. (I want to rewrite
+ * that library wholesale, but time management will not permit.)
  * </p>
  */
 public abstract class Crumtrail implements Serial {
@@ -83,6 +87,11 @@ public abstract class Crumtrail implements Serial {
   }
 
 
+  public final boolean isCondensed() {
+    return blockProof.isCondensed();
+  }
+
+
 
   /**
    * Returns a compressed version of this instance, if not already
@@ -96,6 +105,11 @@ public abstract class Crumtrail implements Serial {
   public final BlockProof blockProof() {
     return blockProof;
   }
+
+
+  /** Returns an instance with the given block proof (after validation). */
+  public abstract Crumtrail setBlockProof(BlockProof blockProof)
+      throws HashConflictException;
   
   
   public final ChainParams chainParams() {
@@ -147,51 +161,11 @@ public abstract class Crumtrail implements Serial {
   public final MerkleTrail asMerkleTrail() throws ClassCastException {
     return (MerkleTrail) this;
   }
-
-
-
-
-  public final Crumtrail trimToTarget(BlockProof chain) {
-
-    final Path trailPath = blockProof.chainState();
-    final Path chainPath = chain.chainState();
-    final long hcbn = trailPath.highestCommonNo(chainPath);
-    if (hcbn == 0)
-      return this;
-
-    final long blockNo = blockNo();
-
-    final Path trimPath;
-    
-    if (hcbn == blockNo || chain.chainState().hasRowCovered(blockNo)) {
-
-      trimPath = trailPath.tailPath(blockNo).headPath(blockNo + 1);
-    
-    } else if (hcbn < blockNo) {
-
-      long iHcbn = trailPath.headPath(blockNo + 1L).highestCommonNo(chainPath);
-      if (iHcbn == 0)
-        return this;
-      trimPath = trailPath.tailPath(iHcbn);
-
-    } else {  // hcbn > blockNo
-
-      trimPath = trailPath.tailPath(blockNo).headPath(hcbn + 1);
-    }
-
-
-    var trimBlockProof = new BlockProof(
-      blockProof.chainParams(), trimPath, chain.getChainId());
-
-    return isMerkled() ?
-        new MerkleTrail(trimBlockProof, asMerkleTrail().cargoProof()) :
-        new LoneTrail(trimBlockProof, crum());
-  }
   
 
   
   /**
-   * Returns the block number the crum's witness hash was first
+   * Returns the block number the crum's witness hash is
    * recorded in the chain.
    */
   public final long blockNo() {
@@ -202,7 +176,6 @@ public abstract class Crumtrail implements Serial {
   
   protected final void verifyCargoHashInChain()
       throws BlockNotFoundException, CargoConflictException {
-    Crum crum = crum();
     final long blockNo = blockNo();
     Path chainState = blockProof.chainState();
     if (!chainState.hasRow(blockNo)) {
@@ -216,9 +189,13 @@ public abstract class Crumtrail implements Serial {
       throw new CargoConflictException(
           "cargo hash in block " + blockNo + " must match " +
           (crumsInBlock() == 1 ? " crum witness" : "merkle root") +
-          " hash; crum=" + crum)
+          " hash; crum=" + crum())
           .setBlockNo(blockNo);
   }
+
+
+
+
   
   
   
@@ -237,6 +214,15 @@ public abstract class Crumtrail implements Serial {
       super(blockProof);
       this.cargoProof = Objects.requireNonNull(cargoProof);
       verifyCargoHashInChain();
+    }
+
+
+
+    @Override
+    public MerkleTrail setBlockProof(BlockProof newBlockProof)
+      throws HashConflictException {
+      
+      return new MerkleTrail(newBlockProof, cargoProof);
     }
 
 
@@ -303,6 +289,13 @@ public abstract class Crumtrail implements Serial {
       super(blockProof);
       this.crum = Objects.requireNonNull(crum);
       verifyCargoHashInChain();
+    }
+
+    @Override
+    public LoneTrail setBlockProof(BlockProof newBlockProof)
+      throws HashConflictException {
+      
+      return new LoneTrail(newBlockProof, crum);
     }
 
 
@@ -377,3 +370,4 @@ public abstract class Crumtrail implements Serial {
   
 
 }
+
