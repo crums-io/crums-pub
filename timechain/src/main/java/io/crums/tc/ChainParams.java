@@ -134,7 +134,7 @@ public class ChainParams implements Serial {
   
   
   /**
-   * Checks and returns the block number the given {@code utc} falls in.
+   * Returns the block number the given {@code utc} falls in.
    * 
    * @throws IllegalArgumentException
    *         if {@code utc < inceptionUtc()}

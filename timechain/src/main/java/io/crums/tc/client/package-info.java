@@ -12,9 +12,8 @@
  * with the timechain: {@linkplain TrailRepo} provides file-based storage for
  * crumtrails from a <em>single</em> chain. {@linkplain Repo}, in turn,
  * encapsulates a <em>collection</em> of {@code TrailRepo}s. Finally,
- * {@linkplain Client}, is a {@code Repo}-aware, multichain accessor. It is
+ * {@linkplain Client}, is the {@code Repo}-aware, multi-chain accessor
  * targeted for end-use.
- *
  * 
  */
 package io.crums.tc.client;

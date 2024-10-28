@@ -32,7 +32,10 @@ public class NotaryPolicy {
   
   
   /**
-   * Constructs an instance with reasonable defaults.
+   * Constructs an instance with reasonable defaults. The
+   * {@link #blockCommitLag()} setting: it is the greater of
+   * {@linkplain #MIN_BLOCK_COMMIT_LAG the minimum} and half the block
+   * duration.
    * 
    * @see #DEFAULT_BLOCKS_SEARCHED
    * @see #NotaryPolicy(ChainParams, int, int)
@@ -140,6 +143,11 @@ public class NotaryPolicy {
    * Number of milliseconds after which a cargo block is considered
    * committed. This, in turn, establishes the earliest time a
    * cargo block can be built.
+   * <p>
+   * Note, races are OK under our model. That is, a notary will occasionally
+   * return a crum receipt for which no trail can later be found: the larger
+   * this setting, the less likely that occurs.
+   * </p>
    * 
    * @return &ge; {@link #MIN_BLOCK_COMMIT_LAG}
    */
