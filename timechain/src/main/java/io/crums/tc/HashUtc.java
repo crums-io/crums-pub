@@ -22,7 +22,7 @@ public class HashUtc {
   /**
    * Compares 2 instances solely by {@linkplain #hash() hash}.
    */
-  public final static Comparator<HashUtc> HASH_COMPARATOR = new Comparator<HashUtc>() {
+  public final static Comparator<HashUtc> HASH_COMPARATOR = new Comparator<>() {
     @Override
     public int compare(HashUtc a, HashUtc b) {
       for (int index = 0; index < HASH_WIDTH; ++index) {
@@ -31,6 +31,15 @@ public class HashUtc {
           return comp;
       }
       return 0;
+    }
+  };
+
+
+  /** Compares 2 instances solely by {@linkplain #utc() utc}. */
+  public final static Comparator<HashUtc> UTC_COMPARATOR =  new Comparator<>() {
+    @Override
+    public int compare(HashUtc a, HashUtc b) {
+      return Long.compare(a.utc(), b.utc());
     }
   };
   
