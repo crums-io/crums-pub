@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -91,7 +92,7 @@ public class TrailRepo {
   private final static FilenameFilter CHAIN_FILTER =
       new FilenameFilter() {
         @Override public boolean accept(File dir, String name) {
-          return name.endsWith(CARGO_PROOF_EXT);
+          return name.endsWith(BLOCK_PROOF_EXT);
         }
       };
 

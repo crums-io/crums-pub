@@ -6,6 +6,7 @@ package io.crums.tc.client;
 import java.io.File;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -13,6 +14,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 
+import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
 import io.crums.tc.NotaryPolicy;
@@ -25,9 +27,7 @@ import io.crums.tc.client.Repo.ChainRepo;
  * crumtrail is designed to also update (extend) the block proofs of 
  * previous crumtrails recorded for that chain. This class, then,
  * manages and calls {@linkplain RemoteChain} instances and hides some of
- * the implementation-specifics of the {@linkplain Repo} class that
- * users will likely not be interested in.
- * 
+ * the implementation-specifics of the {@linkplain Repo} class.
  * 
  * @see RemoteChain
  * @see Repo
@@ -53,12 +53,20 @@ public class Client implements AutoCloseable {
     this(Repo.userRepo());
   }
 
+  
+
 
 
 
 
   public Client(Repo repo) {
     this.repo = Objects.requireNonNull(repo);
+  }
+
+
+
+  public final Repo repo() {
+    return repo;
   }
 
 
@@ -70,6 +78,12 @@ public class Client implements AutoCloseable {
 
   public Optional<String> getDefaultHost() {
     return repo.getDefaultHost();
+  }
+
+
+
+  public List<String> listChainHosts() {
+    return repo.listChainHosts();
   }
 
 
@@ -103,14 +117,51 @@ public class Client implements AutoCloseable {
 
 
 
-  public NotaryPolicy init(URI hostUri) {
+  /**
+   * Fetches and returns the timechain policy at the given host URI.
+   * <em>Does not interact with the repo.</em>
+   * 
+   * @param origin  remote timechain: http/https scheme, with host,
+   *                optional port no., but without path (!)
+   * 
+   * @return policy retrieved from the server
+   */
+  public NotaryPolicy peekHost(URI origin) {
+    return getRemote(origin).policy();
+  }
 
-    var remote = getRemote(hostUri);
+
+
+  /**
+   * Initializes local storage for the timechain hosted at the given URI.
+   * The URI must not contain a path, has either an http or https as the
+   * scheme and optionally specifies a port no. <em>Timechain hostnames
+   * are unique per repo.</em> That is, at most one timechain may be registered
+   * per hostname.
+   * 
+   * On return, the chain's hostname, together with its policy and URI
+   * are recorded in the repo.
+   * 
+   * @param origin  remote timechain: http/https scheme, with host,
+   *                optional port no., but without path (!)
+   * 
+   * @see #peekHost(URI)
+   * @see #getPolicy(String)
+   */
+  public NotaryPolicy init(URI origin) {
+
+    var remote = getRemote(origin);
     return repo.getChainRepo(remote).policy();
   }
 
 
 
+  /**
+   * Returns the policy, if any, as recorded in the repo under the given
+   * hostname.
+   * 
+   * @param host    the hostname
+   */
   public Optional<NotaryPolicy> getPolicy(String host) {
     return repo.findChainRepo(host).map(ChainRepo::policy);
   }
@@ -126,19 +177,60 @@ public class Client implements AutoCloseable {
 
   @SuppressWarnings("resource")
   public Receipt witness(ByteBuffer hash, String host) {
-    return witup(hash, hash, host, getRemoteOrThrow(host)::witness);
 
-  }
-
-  public Receipt update(ByteBuffer hash) {
-    return update(hash, defaultHost());
-  }
-
-  public Receipt update(ByteBuffer hash, String host) {
+    if (hash.remaining() != Constants.HASH_WIDTH)
+      throw new IllegalArgumentException(
+          "hash must be 32 bytes long: " + hash);
+    
     var notes = repo.listPending(hash, host);
-    return notes.isEmpty() ?
-        witness(hash, host) :
-        update(notes.get(0).crum(), host);
+
+    if (!notes.isEmpty()) {
+      assert notes.size() == 1;
+      var crum = notes.get(0).crum();
+      return witup(crum, crum.hash(), host, getRemoteOrThrow(host)::update);
+    }
+
+    return witup(hash, hash, host, getRemoteOrThrow(host)::witness);
+  }
+
+
+
+  public Map<String, List<Receipt>> updatePending() {
+    Map<String, List<Receipt>> out = new TreeMap<>();
+    for (var host : repo.listChainHosts()) {
+      var rcpts = updatePending(host);
+      if (!rcpts.isEmpty())
+        out.put(host, rcpts);
+    }
+    return out.isEmpty() ? Map.of() : Collections.unmodifiableMap(out);
+  }
+
+
+  public List<Receipt> updatePending(String host) {
+    ChainRepo chainRepo = repo.findChainRepo(host).orElseThrow(
+            () -> new IllegalArgumentException("unkown host: " + host));
+    var policy = chainRepo.policy();
+
+    final long now = System.currentTimeMillis();
+    final long binTime = policy.chainParams().timeBinner().binTime(now);
+    final long maxTime =
+        now - binTime > policy.blockCommitLag() ?
+            binTime :
+            binTime - policy.chainParams().blockDuration();
+
+    // final long expiry = 
+
+    return
+        repo.listPendingByHost(host).stream()
+        .filter(note -> note.crum().utc() < maxTime)
+        .sorted()
+        .map(this::update)
+        .toList();
+  }
+
+
+  protected Receipt update(Repo.CrumNote note) {
+    return update(note.crum(), note.host());
   }
 
 
@@ -186,9 +278,7 @@ public class Client implements AutoCloseable {
     return
         repo.findChainRepo(host)
         .map(ChainRepo::trails)
-        .orElseThrow(
-            () -> new IllegalArgumentException("unkown host: " + host))
-        .findTrail(hash, incLineage);
+        .flatMap(trailRepo -> trailRepo.findTrail(hash, incLineage));
   }
 
 /**
@@ -235,15 +325,23 @@ public class Client implements AutoCloseable {
       T obj, ByteBuffer hash, String host,
       BiFunction<T, Long, Receipt> func) {
         
+    var trail = findTrail(hash, host);
+    if (trail.isPresent()) {
+      var rcpt = new Receipt(trail.get());
+      repo.removePending(rcpt.crum().hash(), host);
+      return rcpt;
+    }
+
+
     
     var remote = getRemoteOrThrow(host);
 
     var trailRepo = repo.getChainRepo(remote).trails();
 
-    var existingTrail = trailRepo.findTrail(hash);
+    // var existingTrail = trailRepo.findTrail(hash);
     
-    if (existingTrail.isPresent())
-      return new Receipt(existingTrail.get());
+    // if (existingTrail.isPresent()) 
+    //   return new Receipt(existingTrail.get());
 
 
     long fromBlockNo = Math.max(1L, trailRepo.blockNo());
@@ -252,7 +350,7 @@ public class Client implements AutoCloseable {
     
     if (rcpt.hasTrail()) {
       trailRepo.add(rcpt.trail());
-      repo.removePending(rcpt.crum(), host);
+      repo.removePending(rcpt.crum().hash(), host);
     } else
       repo.addPending(rcpt.crum(), host);
     

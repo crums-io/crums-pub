@@ -16,9 +16,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.TreeMap;
 
 import io.crums.io.DirectoryRemover;
 import io.crums.io.Opening;
@@ -162,7 +164,7 @@ public class Repo {
     if (note.exists())
       return false;
 
-    removePending(crum, host);
+    removePending(crum.hash(), host);
     
     try {
       return note.createNewFile();
@@ -187,7 +189,7 @@ public class Repo {
    * {@code note} and returns the number removed.
    */
   public int removePending(CrumNote note) {
-    return removePending(note.crum(), note.host());
+    return removePending(note.crum().hash(), note.host());
   }
 
 
@@ -196,8 +198,8 @@ public class Repo {
    * Removes all pending notes with the same hash and host as the given
    * {@code note} and returns the number removed.
    */
-  public int removePending(Crum crum, String host) {
-    var notes = listPending(crum.hash(), host);
+  public int removePending(ByteBuffer hash, String host) {
+    var notes = listPending(hash, host);
     int count = 0;
     for (var note : notes) {
       if (crumFile(note.crum(), host).delete())
@@ -207,9 +209,34 @@ public class Repo {
   }
 
 
+  /**
+   * Returns a map of all pending crumtrails (crums) key-ed
+   * by timechain hostname. Note the returned map may be
+   * immutable.
+   */
+  public Map<String, List<Crum>> pendingByHost() {
+    var pending = listPending();
+    switch (pending.size()) {
+    case 0:   return Map.of();
+    case 1:   return Map.of(
+                        pending.get(0).host(),
+                        List.of(pending.get(0).crum()));
+    default:
+    }
+    Map<String, List<Crum>> crumsByHost = new TreeMap<>();
+    for (var note : pending) {
+      List<Crum> crums = crumsByHost.get(note.host());
+      if (crums == null) {
+        crums = new ArrayList<>();
+        crumsByHost.put(note.host(), crums);
+      }
+      crums.add(note.crum());
+    }
+    return crumsByHost;
+  }
 
   public List<CrumNote> listPending() {
-    return CrumNote.fromNames(pending.list());
+    return listPending("", "");
   }
 
 
@@ -231,18 +258,39 @@ public class Repo {
 
 
   /**
+   * Lists all pending crum notes, with the given hex hash and hostname.
+   * The {@code hex} parameter may be specified only by prefix. Similarly,
+   * the {@code host} parameter may be specified only be postfix. For e.g.
+   * the value '{@code com}' constrains the hosts to all those ending
+   * in the {@code .com} domain (note the dot).
    * 
    * @param hex     hex value of hash (prefix OK)
    * @param host    optional hostname (postfix OK)
    */
   public List<CrumNote> listPending(String hex, String host) {
     var suffix = host == null ? "" : host.trim().toLowerCase();
+    
     var filter = new FilenameFilter() {
       @Override
       public boolean accept(File dir, String name) {
-        return name.startsWith(hex) && name.endsWith(suffix);
+        if (!name.startsWith(hex))
+          return false;
+
+        // inefficient.. but doesn't matter
+        CrumNote note;
+        try {
+          note = CrumNote.fromName(name);
+        } catch (Exception x) {
+          System.err.println("[WARNING] funky crum note file: " + name);
+          return false;
+        }
+        return
+            suffix.isEmpty() ||
+            note.host().equals(suffix) ||
+            note.host().endsWith("." + suffix);
       }
     };
+
     return CrumNote.fromNames(pending.list(filter));
   }
 
@@ -257,12 +305,22 @@ public class Repo {
    * @see #fromName(String)
    * @see #fromNames(String[])
    */
-  public record CrumNote(Crum crum, String host) {
+  public record CrumNote(Crum crum, String host) implements Comparable<CrumNote> {
 
     public CrumNote {
       crum.utc();
-      if (host.isEmpty() || !host.trim().equals(host))
-        throw new IllegalArgumentException("host: " + host);
+      host = host.toLowerCase().trim();
+      if (host.isEmpty())
+        throw new IllegalArgumentException("empty host");
+    }
+
+
+    /**
+     * Instances are ordered solely by UTC.
+     */
+    @Override
+    public int compareTo(CrumNote other) {
+      return Long.compare(crum.utc(), other.crum.utc());
     }
 
     /**
@@ -276,15 +334,13 @@ public class Repo {
 
 
     public static List<CrumNote> fromNames(String[] names) {
-      return names.length == 0 ?
-          List.of() :
+      return
           Arrays.asList(names).stream().map(CrumNote::fromName).toList();
     }
 
+
     /**
-     * 
-     * @param name
-     * @return
+     * Returns an instance using the naming convention.
      */
     public static CrumNote fromName(String name) {
       final int dot = name.indexOf('.');
@@ -298,7 +354,7 @@ public class Repo {
       var host = name.substring(pdot + 1);
       try {
         byte[] hash = IntegralStrings.hexToBytes(hex);
-        long utc = Integer.parseInt(sutc);
+        long utc = Long.parseLong(sutc);
         return new CrumNote(new Crum(hash, utc), host);
       
       } catch (Exception x) {
