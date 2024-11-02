@@ -8,7 +8,7 @@ under the [TC-1](https://github.com/crums-io/crums-pub/tree/main/TC-1) subdirect
 The [project documentation page](https://crums-io.github.io/crums-pub/) details
 a conceptual overview of timechains and their proof structures.
 
-The implementation is organized in 3 modules, each layered atop the other.
+Presently, this is organized as 4 modules:
 
 1. [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain) - Defines
 the basic timechain, and its proof structures. Additionally, it provides client-side
@@ -21,6 +21,9 @@ read/write access from multiple *processes* (not just threads).
 3. [ergd](https://github.com/crums-io/crums-pub/tree/main/ergd) - This is a standaolone,
 embedded HTTP REST server launched from the command line. New timechains can also be
 incepted (created) thru this CLI.
+4. [crum](https://github.com/crums-io/crums-pub/tree/main/crum) - This client-side CLI
+posts SHA-256 hashes to timechain servers and archives permanent witness receipts
+(called *crum trails*) in a user repo.
 
 ## Status
 
@@ -30,13 +33,13 @@ The first (alpha) version is nearing release. It works.
 
 The most glaring TODOs:
 
-* Command line timechain client. (There'll be *something* on first release.)
-    * witness
-    * verify crumtrail
-    * update block proof (in crumtrail) from timechain
-* Client-side storage and archival of crumtrails (witness proofs) needs work. As a chain evolves (as it accumulates new blocks) the block proofs in archived crumtrails can be updated *en mass*.
+* ~~Command line timechain client. (There'll be *something* on first release.)~~ CLI mostly checked off.
+    * ~~witness~~
+    * ~~verify crumtrail~~
+    * ~~update block proof (in crumtrail) from timechain~~
+* ~~Client-side storage and archival of crumtrails (witness proofs) needs work. As a chain evolves (as it accumulates new blocks) the block proofs in archived crumtrails can be updated *en mass*.
 With a bit of planning, this can be made efficient, since crumtrails from the same chain share
-the same lineage and therefore share common information.
+the same lineage and therefore share common information.~~
 * Need to work out details about how otherwise independent timechains on the network can choose to record one another's state in order to assert each others' bona fides.
 * Broken landing page (To be fixed before release).
 * Snapshot build script.
@@ -44,7 +47,7 @@ the same lineage and therefore share common information.
 ## Building the SNAPSHOT
 
 The project's build tool is Maven. It uses Java's new virtual threads, so JDK 22
-(at the time of this writing, the latest) is a minimum requirement. Presently, SNAPSHOT versions are not published
+is a minimum requirement. Presently, SNAPSHOT versions are not published
 anywhere. Much has been refactored across projects and much remains before the SNAPSHOT
 moniker can be dropped. To build this project, you'll have to clone and build a number
 of dependencies yourself. Clone the following projects in the suggested order, and build
@@ -61,25 +64,28 @@ each using
 structure and other modules for packaging proofs from general ledgers. This project used to
 know about this repo. The code was refactored so that the base layer no longer knows about
 this project (the relationship is in fact now reversed). Dependencies: `merkle-tree`, `io-util`, `tc-1`
-1. Clone *this* project and build:
+1. Clone *this* project, then `cd` into each of the follow subdirectories and build. Use the usual `mvn clean install`
+command to build the first 2 modules.
 
     1. [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain). Dependencies: `skipledger-base`.
     2. [notary](https://github.com/crums-io/crums-pub/tree/main/notary). Dependencies: `timechain`, `stowkwik`.
     3. [ergd](https://github.com/crums-io/crums-pub/tree/main/ergd). Dependencies: `notary`.
+    4. [crum](https://github.com/crums-io/crums-pub/tree/main/crum). Dependencies: `timechain`.
 
-
-To build the last project `ergd` (the REST server)
-
->   $ mvn clean package appassembler:assemble
-
-Then give this a try..
-
->   $ ./target/binary/bin/ergd -h
+   To build the last 2 modules, `ergd` (the server) and `crum` its CLI client, use
+         
+      >   $ mvn clean package appassembler:assemble
+      
+      In their respective subdirectories, give these a try..
+      
+      >   $ ./target/binary/bin/ergd -h
+      
+      >   $ ./target/binary/bin/crum -h
 
 
 
 ~ Babak
 
-July 2024
+November 2024
 
 
