@@ -21,6 +21,10 @@ public class CrumtrailParser extends BaseParser<Crumtrail> {
   private final CargoProofParser cargoProofParser;
   private final CrumParser crumParser;
 
+  public CrumtrailParser(boolean base64) {
+    this(base64 ? HashEncoding.BASE64_32 : HashEncoding.HEX);
+  }
+
   public CrumtrailParser(HashEncoding hashCodec) {
     super(hashCodec);
     this.blockProofParser = new BlockProofParser(hashCodec);

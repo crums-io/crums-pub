@@ -132,6 +132,17 @@ public class ChainParams implements Serial {
     return inceptionUtc;
   }
   
+
+  /**
+   * Returns the current block no. inferred from system time.
+   * The block at the returned no. is actually likely not yet committed
+   * to the timechain.
+   * 
+   * @return {@code blockNoForUtc(System.currentTimeMillis())}
+   */
+  public final long blockNoNow() {
+    return blockNoForUtc(System.currentTimeMillis());
+  }
   
   /**
    * Returns the block number the given {@code utc} falls in.
@@ -171,15 +182,23 @@ public class ChainParams implements Serial {
   
   /**
    * Returns the starting (smallest) UTC value for the given
-   * block no.
+   * block no. The last (largest) UTC value in the block is
+   * the returned value plus the {@linkplain #blockDuration()},
+   * less one.
+   * 
    */
   public final long utcForBlockNo(long block) {
+    // blocks no.s start from 1, not zero
     return inceptionUtc + (block - 1) * blockDuration;
   }
   
 
 
-
+  /**
+   * Returns the block duration (span) in milliseconds.
+   * 
+   * @return a power of 2
+   */
   public final long blockDuration() {
     return blockDuration;
   }

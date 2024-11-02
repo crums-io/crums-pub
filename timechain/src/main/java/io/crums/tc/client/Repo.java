@@ -366,7 +366,10 @@ public class Repo {
   }
 
 
-
+  
+  public boolean isEmpty() {
+    return !listChainHosts().isEmpty();
+  }
   
 
 

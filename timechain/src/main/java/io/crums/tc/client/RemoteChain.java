@@ -243,8 +243,16 @@ public class RemoteChain implements NotaryService, Channel {
       
 
     } catch (IOException iox) {
-      throw new NetworkException(
-        "i/o error on attempting " + url + " - cause: " + iox.getMessage(), iox);
+      var msg = "I/O error on attempting " + url;
+      if (iox.getMessage() != null)
+        msg += " -- Error message: " + iox.getMessage();
+      if (!iox.getClass().equals(IOException.class))
+        msg += " -- Type: " + iox.getClass().getSimpleName();
+      if (iox.getCause() != null && iox.getCause().getMessage() != null)
+        msg += " -- Detail: " + iox.getCause().getMessage();
+      
+      throw new NetworkException(msg, iox);
+
     } catch (InterruptedException ix) {
       throw new NetworkException(
         "interrupted on attempting " + url, ix);

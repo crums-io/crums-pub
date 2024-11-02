@@ -185,6 +185,62 @@ public class NotaryPolicy {
         blocksRetained == other.blocksRetained &&
         blocksSearched == other.blocksSearched;
   }
+
+
+
+  /**
+   * Returns the time remaining (in millis) to commit the given
+   * block no.
+   * 
+   * @param blockNo &ge; 1
+   * 
+   * @return non-negative, i.e. if zero, likely committed
+   */
+  public final long millisToCommit(long blockNo) {
+    return millisToCommit(blockNo, System.currentTimeMillis());
+  }
+
+
+  /**
+   * Returns the time remaining (in millis) to commit the given
+   * block no.
+   * 
+   * @param blockNo &ge; 1
+   * @param now     UTC time in millis, usually now
+   * 
+   * @return non-negative, i.e. if zero, likely committed
+   */
+  public final long millisToCommit(long blockNo, long now) {
+    if (blockNo < 1L)
+      throw new IllegalArgumentException("blockNo: " + blockNo);
+
+    long blockCommitUtc =
+        params.utcForBlockNo(blockNo + 1) + blockCommitLag;
+
+    return Math.max(0L, blockCommitUtc - now);
+  }
+
+
+  /**
+   * Returns the TTL for the given cargo block no. in millis.
+   * 
+   * @param blockNo &ge; 1
+   * @return non-negative
+   */
+  public final long cargoTTL(long blockNo) {
+    final long now = System.currentTimeMillis();
+    final long blockNoNow = params.blockNoForUtc(now);
+    final long blockDiff = blockNoNow - blockNo;
+    if (blockDiff <= 0)
+      return -1L;
+    final long oldestCargoNo = blockNoNow - blocksRetained + 1;
+    if (blockNo < oldestCargoNo)
+      return 0;
+    else
+      return
+        (blockNo - oldestCargoNo) * params.blockDuration() +
+        millisToCommit(blockNoNow, now);
+  }
   
   
 }

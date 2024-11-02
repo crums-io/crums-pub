@@ -25,6 +25,7 @@ import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
 import io.crums.util.IntegralStrings;
+import io.crums.util.Lists;
 import io.crums.util.RandomId;
 
 
@@ -82,20 +83,28 @@ public class TrailRepo {
 
   public final static String CARGO_PROOF_EXT = ".crums";
   public final static String BLOCK_PROOF_EXT = ".chain";
+  public final static String STATE_PATCH_EXT = BLOCK_PROOF_EXT + ".patch";
 
-  private final static int CPX_LEN = CARGO_PROOF_EXT.length();
+  private final static int BX_LEN = BLOCK_PROOF_EXT.length();
+  private final static int PX_LEN = STATE_PATCH_EXT.length();
 
   /** Staging directory name. */
   public final static String STAGING = "staging";
 
 
-  private final static FilenameFilter CHAIN_FILTER =
+  private final static FilenameFilter BP_FILTER =
       new FilenameFilter() {
         @Override public boolean accept(File dir, String name) {
           return name.endsWith(BLOCK_PROOF_EXT);
         }
       };
 
+  private final static FilenameFilter PATCH_FILTER =
+      new FilenameFilter() {
+        @Override public boolean accept(File dir, String name) {
+          return name.endsWith(STATE_PATCH_EXT);
+        }
+      };
 
   protected final File dir;
   protected final File stagingDir;
@@ -162,6 +171,37 @@ public class TrailRepo {
             trail.crum()));
 
     return Optional.of(trail.setBlockProof(blockProof));
+  }
+
+
+  public Optional<Crumtrail> findTrailByHex(String hex, boolean incLineage) {
+    var hexList = findTrailHashes(hex, 2);
+    return
+        hexList.size() == 1 ?
+        findTrail(
+          ByteBuffer.wrap(IntegralStrings.hexToBytes(hexList.getFirst())),
+          incLineage) :
+        Optional.empty();
+  }
+
+
+  /**
+   * Returns a list of hashes in the repo that start with the given hex prefix.
+   *
+   * @param hexPrefix   hash prefix in hexadecimal digits
+   * @param limit       the maximum number of matches returned
+   *
+   * @return possibly empty, but no larger in size than {@code limit}
+   */
+  public List<String> findTrailHashes(String hexPrefix, int limit) {
+    if (limit < 1)
+      throw new IllegalArgumentException("limit must be positive: " + limit);
+    return
+        trailTree.streamStartingFrom(hexPrefix)
+        .limit(limit)
+        .filter(e -> e.hex.startsWith(hexPrefix))
+        .map(e -> e.hex)
+        .toList();
   }
 
 
@@ -240,6 +280,7 @@ public class TrailRepo {
     // any necessary update to the chain's block proof is completed
 
     writeTrail(trail);
+    cleanUp();
   }
 
 
@@ -266,8 +307,13 @@ public class TrailRepo {
     }
     writeChain(chain);
     writeTrail(trail);
+    cleanUp();
   }
 
+
+  public void cleanUp() {
+    // TODO
+  }
 
 
   private boolean writeChain(BlockProof chain) {
@@ -294,6 +340,11 @@ public class TrailRepo {
   }
 
 
+  protected final File chainPatchFile(long bn) {
+    return new File(dir, bn + STATE_PATCH_EXT);
+  }
+
+
 
   protected List<Long> listChainFilesNos() {
     return chainNos().toList();
@@ -301,10 +352,18 @@ public class TrailRepo {
 
 
   private Stream<Long> chainNos() {
+    return entityNos(BP_FILTER, BX_LEN);
+  }
+
+  private Stream<Long> entityNos(FilenameFilter filter, int extLen) {
     return
-        Arrays.asList(dir.list(CHAIN_FILTER)).stream()
-        .map(s -> s.substring(0, s.length() - CPX_LEN))
+        Arrays.asList(dir.list(filter)).stream()
+        .map(s -> s.substring(0, s.length() - extLen))
         .map(Long::parseLong);
+  }
+
+  private Stream<Long> patchNos() {
+    return entityNos(PATCH_FILTER, PX_LEN);
   }
 
 
