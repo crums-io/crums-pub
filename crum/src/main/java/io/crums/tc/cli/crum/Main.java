@@ -33,6 +33,7 @@ import io.crums.tc.json.CrumtrailParser;
 import io.crums.util.IntegralStrings;
 import io.crums.util.Base64_32;
 import io.crums.util.Strings;
+import io.crums.util.TaskStack;
 import io.crums.util.json.JsonPrinter;
 
 
@@ -126,7 +127,7 @@ public class Main {
         rcpt.blockNo());
   }
 
-  final static long CURE_LAG_MILLIS = 1250L;
+  final static long CURE_LAG_MILLIS = 1500L;
 
   /**
    * 
@@ -190,7 +191,7 @@ public class Main {
     printf(
         " %-" + P_COL_W + "s %d%n",
         "Last repo block:",
-        chainRepo.trails().blockNo());
+        chainRepo.trails().commitNo());
   }
 
   final static int P_COL_W = 18;
@@ -262,6 +263,7 @@ public class Main {
 
   static void printUnhandledError(Exception x) {
     printError("Unhandled Error", x);
+    x.printStackTrace(System.err);
   }
 
 }
@@ -269,9 +271,15 @@ public class Main {
 
 abstract class BaseCommand implements Runnable {
 
+  /**
+   * Closes stuff on exit. Presently, the only place this may potentially matter
+   * is with the HTTP client.
+   */
+  protected final TaskStack closer = new TaskStack();
+
   @Override
   public final void run() {
-    try {
+    try (closer) {
       runImpl();
     } catch (ParameterException px) {
       throw px;
@@ -279,6 +287,7 @@ abstract class BaseCommand implements Runnable {
       Main.printError("Hash proof failure", hcx);
     } catch (Exception x) {
       Main.printUnhandledError(x);
+      System.exit(1);
     }
   }
 
@@ -332,8 +341,7 @@ class RepoRoot {
 
   
   public Repo openRepo(Opening mode) {
-    boolean set = rootDir != null;
-    File repoDir = set ? rootDir : Repo.defaultUserRepoPath();
+    File repoDir = rootDir().orElse(Repo.defaultUserRepoPath());
     try {
       return new Repo(repoDir, mode);
     } catch (Exception x) {
@@ -538,6 +546,8 @@ class Witness extends NetworkCommand {
     
     Client client = new Client(new Repo(repoDir));
 
+    this.closer.pushClose(client);
+
     byte[] hash;
     if (hashOpt.hash != null)
       hash = hashOpt.hash;
@@ -711,6 +721,7 @@ class Seal extends NetworkCommand {
     }
     boolean multihost = pending.size() > 1;
     Client client = new Client(repo);
+    this.closer.pushClose(client);
 
     // track how many crums remain to be trailed
     int pendingTally = 0;
@@ -844,20 +855,15 @@ class Peek extends NetworkCommand {
 
 
 
-
-
-
   @Override
   void netRun() {
 
-    boolean policyRead = false;
     var out = System.out;
 
     try (var remote = new RemoteChain(origin)) {
 
       remote.defaultCompression(true);
       var policy = remote.policy();
-      policyRead = true;
       out.println();
       Main.printPolicy(policy, 0);
       out.printf(
@@ -885,7 +891,7 @@ class Peek extends NetworkCommand {
     "Patch (update) repo proofs with chain state",
   }
 )
-class Patch implements Runnable {
+class Patch extends NetworkCommand {
 
   @Mixin
   RepoRoot repoRoot;
@@ -898,18 +904,50 @@ class Patch implements Runnable {
   @Option(
     names = { "--host" },
     paramLabel = "HOSTNAME",
-    required = true,
+    required = false,
     description = {
       "Remote timechain identified by hostname only",
       "If not specified, then the repo's @|italic default|@ host is used",
     }
   )
+  void setHost(String host) {
+    this.hostname = host.toLowerCase();
+  }
   String hostname;
 
 
   @Override
-  public void run() {
-    // TODO
+  void netRun() {
+    Repo repo = repoRoot.openRepo(Opening.READ_WRITE_IF_EXISTS);
+
+    if (hostname == null)
+      hostname = repo.getDefaultHost().orElseThrow(() ->
+          new ParameterException(
+              spec.commandLine(),
+              "either specify a --host, or define a default host"));
+
+    Client client = new Client(repo);
+    closer.pushClose(client);
+
+    var params =
+        client.getPolicy(hostname)
+        .orElseThrow(() ->
+          new ParameterException(
+              spec.commandLine(),
+              "chain hostname unknown to repo: " + hostname))
+        .chainParams();
+
+    final long commitNo = client.repoCommitNo(hostname);
+    assert commitNo > 0L;
+    
+    final long newCommitNo = client.patchChain(hostname);
+    assert newCommitNo >= commitNo;
+
+    Main.printf(
+        "%s patched%nRepo is at block [%d]: %s%n",
+        Strings.nOf(newCommitNo - commitNo, "block"),
+        newCommitNo,
+        Main.ansiDateCode(params.utcForBlockNo(newCommitNo + 1) - 1L));
   }
 
 
@@ -1083,11 +1121,10 @@ class Find extends BaseCommand {
         boolean orMore = hits == 16;
         int digitsNeeded = orMore ? 2 : 1;
         out.printf(
-            "Ambiguous. %d %s hits.%nSpecify %d more hex %s%n",
+            "Ambiguous. %d%s hits.%nEnter %s%n",
             hits,
-            orMore ? "or more" : "",
-            digitsNeeded,
-            Strings.pluralize("digit", digitsNeeded));
+            orMore ? " or more" : "",
+            Strings.nOf(digitsNeeded, "more hex digit"));
         return;
       }
     }

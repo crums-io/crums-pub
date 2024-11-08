@@ -33,9 +33,19 @@ import io.crums.util.json.JsonParsingException;
 
 /**
  * HTTP REST client to a single server.
+ * 
+ * <h2>Warning</h2>
+ * 
+ * <em>Concurrent behavior not tested.</em> Depends on how
+ * {@code java.net.http.HttpClient} behaves concurrently.
+ * Best to limit to serial access, even tho the REST protocol is
+ * stateless (and mostly idempotent).
  */
 public class RemoteChain implements NotaryService, Channel {
 
+
+  /** Default connection timeout in seconds. */
+  public final static int DEFAULT_TIMEOUT_SECONDS = 15;
 
   /**
    * Returns the given server address as a normalized URI.
@@ -100,7 +110,7 @@ public class RemoteChain implements NotaryService, Channel {
 
 
   /** Request timeout in seconds. */
-  private int timeout = 15;
+  private int timeout = DEFAULT_TIMEOUT_SECONDS;
 
   private boolean compress;
 
@@ -180,6 +190,7 @@ public class RemoteChain implements NotaryService, Channel {
     }
   }
 
+
   public RemoteChain defaultCompression(boolean on) {
     compress = on;
     return this;
@@ -190,10 +201,21 @@ public class RemoteChain implements NotaryService, Channel {
   }
 
 
+  /**
+   * Returns the connection timeout in seconds.
+   * 
+   * @see #DEFAULT_TIMEOUT_SECONDS
+   */
   public int timeout() {
     return timeout;
   }
 
+  /**
+   * Sets the connection timeout.
+   * 
+   * @param seconds   must be positive
+   * @return          this instance
+   */
   public RemoteChain timeout(int seconds) {
     if (seconds <  1)
       throw new IllegalArgumentException(
@@ -385,16 +407,14 @@ public class RemoteChain implements NotaryService, Channel {
   @Override
   public void close() {
     this.open = false;
-    // try {
-    //   // FIXME: the following is *supposed to be in the API, but the
-    //   // version loaded in JDK 22 (i.e. sans pom dep declaration) has
-    //   // no such method: commented out
-    //   this.httpClient.close();
-    // } catch (Exception x) {
-    //   System.err.println(
-    //       "[WARNING] ignoring error on shutting down HTTP client: " +
-    //       x.getMessage());
-    // }
+    
+    try {
+      this.httpClient.close();
+    } catch (Exception x) {
+      System.err.println(
+          "[WARNING] ignoring error on shutting down HTTP client: " +
+          x.getMessage());
+    }
   } 
 
 
@@ -406,10 +426,13 @@ public class RemoteChain implements NotaryService, Channel {
 
 
 
+  @SuppressWarnings("resource")
   public RemoteChain reboot() {
-    if (isOpen())
-      throw new IllegalStateException("instance is still open");
-    return new RemoteChain(this.hostUrl);
+    this.close();
+    return
+        new RemoteChain(this.hostUrl)
+        .defaultCompression(this.compress)
+        .timeout(timeout);
   }
 
 

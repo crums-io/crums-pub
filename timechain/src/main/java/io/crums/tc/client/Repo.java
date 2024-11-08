@@ -621,10 +621,16 @@ public class Repo {
   }
 
 
-  /** Chain repo by host name. */
-  public ChainRepo loadChainRepo(String host) {
+  /**
+   * Chain repo by host name.
+   * 
+   * @throws IllegalArgumentException
+   *          if no such chain host is known to the repo
+   * @throws RepoException
+   *          if the named chain repo is in invalid state
+   */
+  public ChainRepo loadChainRepo(String host) throws RepoException {
     final File dir = chainDir(host);
-    
     var hostUri = loadOrigin(dir).hostURI();
     var chainRepo = new ChainRepo(hostUri, dir);
 
@@ -638,8 +644,13 @@ public class Repo {
 
   private ChainOrigin loadOrigin(File dir) {
     final File originConf = new File(dir, ORIGIN_FILE);
-    if (!originConf.isFile())
-      throw new RepoException("missing origin file: " + originConf);
+    if (!originConf.isFile()) {
+      if (dir.isDirectory())
+        throw new RepoException("missing origin file: " + originConf);
+      else
+        throw new IllegalArgumentException(
+            "chain hostname not found: " + dir.getName());
+    }
     
     var originProps = new Properties();
     try (var in = new FileInputStream(originConf)) {
@@ -791,7 +802,7 @@ public class Repo {
     }
 
 
-    public NotaryPolicy policy() {
+    public NotaryPolicy policy() throws RepoException {
       File policyFile = new File(dir(), POLICY_FILE);
       try {
         return NotaryPolicyParser.INSTANCE.toEntity(policyFile);
@@ -803,6 +814,10 @@ public class Repo {
     }
 
 
+    /**
+     * Returns the host-specific crum trail repo. Layout-wise, this, the policy
+     * and origin files are all rooted in the same directory.
+     */
     public TrailRepo trails() {
       return trailRepo;
     }

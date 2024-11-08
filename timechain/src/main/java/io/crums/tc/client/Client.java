@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
@@ -167,6 +168,39 @@ public class Client implements AutoCloseable {
   }
 
 
+
+  /**
+   * Returns block no. of the latest crum trail recorded on the given
+   * chain, or zero, if no such timechain is known to the repo.
+   * 
+   * @param host    the chain's hostname
+   */
+  public long repoBlockNo(String host) {
+    return getChainNo(host, TrailRepo::blockNo);
+  }
+
+  /**
+   * Returns the latest block no. (whose hash is recorded in the repo)
+   * for the given chain. The returned value is greater than or equal
+   * to the return value of {@link #repoBlockNo(String)} with the same
+   * argument.
+   * 
+   * @param host    the chain's hostname
+   * 
+   * @return  non-negative and &ge; {@code repoBlockNo(host)}
+   */
+  public long repoCommitNo(String host) {
+    return getChainNo(host, TrailRepo::commitNo);
+  }
+
+
+  private long getChainNo(String host, Function<TrailRepo,Long> func) {
+    return
+        repo.findChainRepo(host)
+        .map(Repo.ChainRepo::trails)
+        .map(func)
+        .orElse(0L);
+  }
   
 
 
@@ -338,12 +372,6 @@ public class Client implements AutoCloseable {
 
     var trailRepo = repo.getChainRepo(remote).trails();
 
-    // var existingTrail = trailRepo.findTrail(hash);
-    
-    // if (existingTrail.isPresent()) 
-    //   return new Receipt(existingTrail.get());
-
-
     long fromBlockNo = Math.max(1L, trailRepo.blockNo());
     
     var rcpt = func.apply(obj, fromBlockNo);
@@ -360,7 +388,20 @@ public class Client implements AutoCloseable {
 
 
 
-
+  /**
+   * Patches the crum trails in the sub repo for the given host.
+   * 
+   * @param host  timechain's hostname
+   * 
+   * @return the latest block no recorded in the repo, on return
+   */
+  public long patchChain(String host) {
+    var remote = getRemoteOrThrow(host);
+    var trailRepo = repo.getChainRepo(remote).trails();
+    var patch = remote.stateProof(true, trailRepo.blockNo());
+    boolean updated = trailRepo.patchState(patch);
+    return updated ? patch.blockNo() : trailRepo.blockNo();
+  }
 
 
 

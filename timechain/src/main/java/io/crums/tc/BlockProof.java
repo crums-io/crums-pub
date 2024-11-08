@@ -136,68 +136,35 @@ public class BlockProof implements Serial {
   }
 
 
+  public final BlockProof appendTail(BlockProof tail) {
+    if (!tail.params.equalParams(params))
+      throw new IllegalArgumentException("chain params mismatch: " + tail.params);
+    return appendTail(tail.chainState);
+  }
+
+
   /**
-   * Extends the block proof by stitching a [hash proof] path forward
-   * from the given target block no to the highest block in the {@code other}
-   * proof. If the other proof does not intersect with this one, or if
-   * it does not extend this proof (to a higher block no.), then this
-   * instance is returned.
-   * <p>
-   * On success, the returned proof contains the "head" blocks in this proof,
-   * up to the block numbered {@code targetBlockNo}, followed by a <em>skip
-   * path</em> from {@code targetBlockNo} to the last block in the other
-   * proof. This way, by repeated invoking this method, one can build proofs
-   * that contain a set of target block no.s on the left side (head), and a
-   * [hash] skip path to the timechain's latest block on the right side (tail).
-   * </p>
-   * <p>
-   * TODO: needs review since paths can now be condensed
-   * </p>
+   * Appends the given timechain <em>tail</em> blocks to this blockproof
+   * and returns the result.
    * 
-   * @throws HashConflictException
-   *         if the given block proof is provably not from the same chain
-   *         (i.e. block hashes conflict at one or more block no.s)
+   * @param tailBlocks  <em>must</em> reference the hash of this instance's last
+   *                    block
+   * @return  a new block proof
+   * 
+   * @see Path#appendTail(Path)
+   * @see #forBlockNo(long)
    */
-  public final BlockProof extendTarget(long targetBlockNo, BlockProof other)
+  public final BlockProof appendTail(Path tailBlocks)
       throws HashConflictException {
 
-    if (targetBlockNo <= 0)
-      throw new IllegalArgumentException("targetBlockNo: " + targetBlockNo);
-    
-    if (!chainState.hasRow(targetBlockNo))
-      throw new IllegalArgumentException(
-          "targetBlockNo (" + targetBlockNo + ") not in: " +
-          chainState.rowNumbers());
-
-
-    // verify the *known* common blocks are in agreement
-    {
-      long hbn = highestCommonBlockNo(other);
-      if (hbn < targetBlockNo || hbn == other.blockNo())
-        return this;
-    }
-    
-    final int tbnIndex =
-        Collections.binarySearch(chainState.rowNumbers(), targetBlockNo);
-
-    assert tbnIndex >= 0;
-
-    var blocks = new ArrayList<Row>();
-    blocks.addAll(chainState.rows().subList(0, tbnIndex + 1));
-    
-    var skipNos = SkipLedger.skipPathNumbers(targetBlockNo, other.blockNo());
-    for (long bn : skipNos.subList(1, skipNos.size()))
-      blocks.add(other.chainState.getRowByNumber(bn));
-
-    Path statePath = new Path(blocks).pack().path();
-    
-    return new BlockProof(params, statePath);
+    Path newStatePath = chainState.appendTail(tailBlocks);
+    return new BlockProof(params, newStatePath);
   }
 
 
 
   /**
-   * Returns the highest block no. whose hash is known by both this and the
+   * Returns the highest block no. contained in both this and the
    * {@code other} block proof.
    * 
    * @param other   block proof from the same chain this instance is from
@@ -209,7 +176,7 @@ public class BlockProof implements Serial {
    *                               for the 2 instances conflict
    * @throws IllegalArgumentException
    *                    if the 2 instances' {@linkplain #chainParams()} conflict
-   * @see #extendTarget(long, BlockProof)
+   * 
    * @see #highestCommonBlockNo(Path)
    */
   public final long highestCommonBlockNo(BlockProof other)
@@ -224,7 +191,7 @@ public class BlockProof implements Serial {
 
 
   /**
-   * Returns the highest block no. whose hash is known by both this and the
+   * Returns the highest block no. contained both in this and the
    * {@code other} hash path proof. The hashes of the blocks at that block no.
    * are checked for consistency. (Since {@code Path} instances are validated
    * on construction, we needn't validate the hash of the lower numbered blocks
@@ -248,12 +215,12 @@ public class BlockProof implements Serial {
    * 
    * @throws HashConflictException if the hashes at the highest known block no.s
    *                               for the 2 instances conflict
-   * @see #extendTarget(long, BlockProof)
+  //  * @see #extendTarget(long, BlockProof)
    */
   public final long highestCommonBlockNo(Path other)
       throws HashConflictException {
 
-    return chainState.highestCommonNo(other);
+    return chainState.highestCommonFullNo(other);
   }
 
 

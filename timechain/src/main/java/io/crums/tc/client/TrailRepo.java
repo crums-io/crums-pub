@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import io.crums.io.FileUtils;
@@ -25,7 +26,6 @@ import io.crums.tc.Constants;
 import io.crums.tc.Crum;
 import io.crums.tc.Crumtrail;
 import io.crums.util.IntegralStrings;
-import io.crums.util.Lists;
 import io.crums.util.RandomId;
 
 
@@ -77,6 +77,8 @@ import io.crums.util.RandomId;
  * chain files can be removed without loss of information. (There are
  * race condition checks to be made before deleting these.)
  * </p>
+ * TODO: patch files need more validation (guard against mischievous timechain
+ * servers).
  */
 public class TrailRepo {
 
@@ -90,6 +92,9 @@ public class TrailRepo {
 
   /** Staging directory name. */
   public final static String STAGING = "staging";
+
+
+  public final static String LOG_NAME = "io.crums.tc.client";
 
 
   private final static FilenameFilter BP_FILTER =
@@ -163,17 +168,43 @@ public class TrailRepo {
           "crum hash conflicts for hex path " + trailFile);
 
     final long tbn = trail.blockNo();
-    var chainState = chainState();
-    var blockProof = chainState.forBlockNo(tbn, incLineage)
+    final var stateProof = chainState();
+    if (stateProof == null || !stateProof.chainState().hasRow(tbn)) {
+      System.getLogger(LOG_NAME).log(
+          Level.WARNING,
+          "expected block [" + tbn + "] missing for " + trail.crum().hashHex());
+      return Optional.of(trail);
+    }
+
+    
+    
+    var blockProof =
+        chainPatch(stateProof.blockNo())
+        .map(patch -> stateProof.appendTail(patch))
+        .orElse(stateProof)
+        .forBlockNo(trail.blockNo(), incLineage)
         .orElseThrow(() -> new IllegalStateException(
-            "chain block proof [" + chainState.blockNo() +
+            "chain block proof [" + stateProof.blockNo() +
             "] does not contain trail block [" + trail.blockNo() + "] for " +
             trail.crum()));
-
+    
     return Optional.of(trail.setBlockProof(blockProof));
   }
 
 
+  /**
+   * Searches for a <em>single</em> crum trail with the given hash
+   * <em>prefix</em>, and returns it, if found. That is, if empty is
+   * returned, then it is either because no such entry exists,
+   * or because the prefix is ambiguous.
+   * 
+   * @param hex           hexadecimal prefix of hash searched
+   * @param incLineage    if {@code true}, then the timechain's gensis block
+   *                      is included in the returned trail's block proof
+   * 
+   * @return  present, if exists and not {@code hex} prefix not ambiguous
+   * @see #findTrailHashes(String, int)
+   */
   public Optional<Crumtrail> findTrailByHex(String hex, boolean incLineage) {
     var hexList = findTrailHashes(hex, 2);
     return
@@ -189,7 +220,7 @@ public class TrailRepo {
    * Returns a list of hashes in the repo that start with the given hex prefix.
    *
    * @param hexPrefix   hash prefix in hexadecimal digits
-   * @param limit       the maximum number of matches returned
+   * @param limit       the maximum number of matches returned (&gt; 0)
    *
    * @return possibly empty, but no larger in size than {@code limit}
    */
@@ -234,35 +265,15 @@ public class TrailRepo {
     final long trailBn = trail.blockNo();
     final long repoBn = repoChain.blockNo();
 
-    if (trailBn < repoBn) {
-      
-      if (!repoChain.chainState().hasRow(trailBn))
-        throw new IllegalArgumentException(
-            "trail block [" + trailBn +
-            "] is (behind and) not contained in repo " + this +
-            "'s block proof ending at block [" + repoBn + "]");
-      
-      assertBlockHash(repoChain, trailChain, trailBn);
-      
-      // otherwise, thump up
+    if (trailBn > repoBn) {
 
-    } else if (trailBn > repoBn) {
+      if (!trailChain.chainState().hasRow(repoBn))
+        throw new IllegalArgumentException(
+            "block proof in trail does not reference block [" +
+            repoBn + "], the last block in repo " + this);
 
       // following throws HCE on mismatched hashes
-      // or IAE on mismatched chain params..
-
-      final long hcbn = trailChain.highestCommonBlockNo(repoChain);
-      if (hcbn == 0)
-        throw new IllegalArgumentException(
-          "trail chain (block proof) does not intersect with " +
-          "chain recorded in repo " + this);
-
-      if (hcbn != repoBn)
-        throw new IllegalArgumentException(
-          "block proof in trail does not reference block [" +
-          repoBn + "], the last block in repo " + this);
-
-      
+      assertBlockHash(repoChain, trailChain, repoBn);
 
       Path newStatePath =
           repoChain.chainState().appendTail(
@@ -271,27 +282,74 @@ public class TrailRepo {
       var newChain = new BlockProof(repoChain.chainParams(), newStatePath);
       writeChain(newChain);
 
-    } else {
+    } else { // assert trailBn <= repoBn;
 
-      // assert trailBn == repoBn;
+      if (trailBn != repoBn && !repoChain.chainState().hasRow(trailBn))
+        throw new IllegalArgumentException(
+            "trail block [" + trailBn +
+            "] is (behind and) not contained in repo " + this +
+            "'s block proof ending at block [" + repoBn + "]");
+
       assertBlockHash(repoChain, trailChain, trailBn);
     }
 
     // any necessary update to the chain's block proof is completed
 
     writeTrail(trail);
-    cleanUp();
+    cleanUpTo(trail.blockNo());
   }
 
 
 
-  private void assertBlockHash(
+  /**
+   * Attempts to patch the repo block proof to the latest state and returns the
+   * result.
+   *  
+   * @param patch   block proof extending the current block proof
+   * @return
+   * @throws HashConflictException
+   *          if the hash of the latest block in the repo conflicts with that of
+   *          the given argument
+   * @throws IllegalArgumentException
+   *          if {@code patch.isCondensed()} is true
+   */
+  public boolean patchState(BlockProof patch) throws HashConflictException {
+
+    if (patch.isCondensed())
+      throw new IllegalArgumentException(
+          "condensed patch block proof: " + patch);
+    
+    long currentPatchNo = patchNos().max(Long::compare).orElse(0L);
+    if (patch.blockNo() <= currentPatchNo)
+      return false;
+
+    
+    var chainState = chainState();
+    if (chainState == null) {
+      writePatch(patch);
+      removePatchesLessThan(patch.blockNo());
+      return true;
+    }
+
+    if (!patch.chainState().hasRowCovered(chainState.blockNo()))
+      return false;
+
+    assertBlockHash(chainState, patch, chainState.blockNo());
+    writePatch(patch);
+    removePatchesLessThan(patch.blockNo());
+    return true;
+  }
+
+
+  /** Always returns true (so that it may be AND'ed), or throws HCF. */
+  private boolean assertBlockHash(
       BlockProof repoChain, BlockProof trailChain, long blockNo) {
     
     if (!repoChain.chainState().getRowHash(blockNo).equals(
         trailChain.chainState().getRowHash(blockNo)))
 
       throw new HashConflictException("at block [" + blockNo + "]");
+    return true;
   }
 
 
@@ -300,27 +358,86 @@ public class TrailRepo {
     BlockProof chain;
     if (tbn != trail.blockProof().blockNo()) {
       var statePath = trail.blockProof().chainState().headPath(tbn + 1);
-      assert statePath.hiRowNumber() == tbn;
+      assert statePath.hi() == tbn;
       chain = new BlockProof(trail.chainParams(), statePath);
     } else {
       chain = trail.blockProof();
     }
     writeChain(chain);
+    removePatchesLessThan(tbn + 1L, 0);
     writeTrail(trail);
-    cleanUp();
   }
 
 
   public void cleanUp() {
-    // TODO
+  }
+
+  /** @param blockNo  (exclusive) */
+  private int cleanUpTo(long blockNo) {
+    return
+        removeChainFilesLessThan(blockNo) + 
+        removePatchesLessThan(blockNo + 1);
+  }
+
+
+  /**
+   * Controls the history buffer size.
+   * 
+   * @return &ge; 0; defaults to 2.
+   */
+  protected int historyBufferSize() {
+    return 2;
+  }
+
+  protected final int removePatchesLessThan(long blockNo) {
+    return removePatchesLessThan(blockNo, historyBufferSize());
+  }
+
+  private int removePatchesLessThan(long blockNo, int buffer) {
+    return removeFilesLessThan(blockNo, buffer, patchNos(), this::patchFile);
+  }
+
+  protected final int removeChainFilesLessThan(long blockNo) {
+    return removeChainFilesLessThan(blockNo, historyBufferSize());
+  }
+
+  private int removeChainFilesLessThan(long blockNo, int buffer) {
+    return removeFilesLessThan(blockNo, buffer, chainNos(), this::chainFile);
+  }
+
+
+  private int removeFilesLessThan(
+      long blockNo, int buffer, Stream<Long> nos, Function<Long,File> fileFunc) {
+
+    List<Long> eligibleNos = nos.filter(n -> n < blockNo).sorted().toList();
+    
+    final int maxIndex = eligibleNos.size() - buffer; // exclusive
+    if (maxIndex <= 0)
+      return 0;
+    
+    return (int)
+        eligibleNos.subList(0, maxIndex).stream()
+        .map(fileFunc)
+        .filter(File::delete)
+        .count();
   }
 
 
   private boolean writeChain(BlockProof chain) {
-    File chainFile = chainFile(chain.blockNo());
-    File staged = newStagedFile(chainFile.getName());
+    return writeChain(chain, chainFile(chain.blockNo()));
+  }
+
+  private boolean writePatch(BlockProof patch) {
+    return writeChain(patch, patchFile(patch.blockNo()));
+  }
+
+
+
+  private boolean writeChain(BlockProof chain, File path) {
+    File staged = newStagedFile(path.getName());
     FileUtils.writeNewFile(staged, chain.serialize());
-    return commitStaged(staged, chainFile);
+    return commitStaged(staged, path);
+
   }
 
 
@@ -340,19 +457,29 @@ public class TrailRepo {
   }
 
 
-  protected final File chainPatchFile(long bn) {
+  protected final File patchFile(long bn) {
     return new File(dir, bn + STATE_PATCH_EXT);
   }
 
 
 
-  protected List<Long> listChainFilesNos() {
-    return chainNos().toList();
+  protected final List<Long> listChainFileNos() {
+    return chainNos().sorted().toList();
+  }
+
+  
+
+  protected final List<Long> listPatchFileNos() {
+    return patchNos().sorted().toList();
   }
 
 
   private Stream<Long> chainNos() {
     return entityNos(BP_FILTER, BX_LEN);
+  }
+
+  private Stream<Long> patchNos() {
+    return entityNos(PATCH_FILTER, PX_LEN);
   }
 
   private Stream<Long> entityNos(FilenameFilter filter, int extLen) {
@@ -362,16 +489,30 @@ public class TrailRepo {
         .map(Long::parseLong);
   }
 
-  private Stream<Long> patchNos() {
-    return entityNos(PATCH_FILTER, PX_LEN);
-  }
 
-
+  /**
+   * Returns the timechain state as of the last crum trail saved in this
+   * repo or {@code null} if the repo is empty. 
+   */
   public BlockProof chainState() {
     return chainNos().max(Long::compare).map(this::loadChain).orElse(null);
   }
 
+  public Optional<BlockProof> chainPatch(long fromBlockNo) {
+    return
+        patchNos()
+        .filter(bn -> bn > fromBlockNo)
+        .max(Long::compare)
+        .map(this::loadPatch);
+  }
 
+
+  /**
+   * Returns the crum trail chain's block no. Unless assertions are turned on,
+   * the chain file is not actually loaded.
+   * 
+   * @return the block no. of the latest (youngest) crum trail.
+   */
   public long blockNo() {
     long bn = chainNos().max(Long::compare).orElse(0L);
     assert bn == 0 || chainState().blockNo() == bn;
@@ -379,9 +520,24 @@ public class TrailRepo {
   }
 
 
+  /**
+   * Returns the highest block no. recorded in this repo.
+   */
+  public long commitNo() {
+    long pn = patchNos().max(Long::compare).orElse(0L);
+    return Math.max(pn, blockNo());
+  }
+
+
 
   private BlockProof loadChain(long tbn) {
     var mem = FileUtils.loadFileToMemory(chainFile(tbn));
+    return BlockProof.load(mem);
+  }
+
+
+  private BlockProof loadPatch(long tbn) {
+    var mem = FileUtils.loadFileToMemory(patchFile(tbn));
     return BlockProof.load(mem);
   }
 
