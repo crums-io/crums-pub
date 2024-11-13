@@ -35,7 +35,19 @@ import io.crums.util.Lists;
 import io.crums.util.Strings;
 
 /**
- * 
+ * The cargo chain is like an assembly line in a factory. At the head
+ * of the assembly line, new cargo blocks are created and fresh crums
+ * (witnessed hash-UTC tuples) are deposited in the yet unbuilt cargo
+ * block. After wall time has elapsed by a safe margin, the cargo block
+ * is built and its computed hash is committed to the timechain block
+ * with the same block no.
+ * <p>
+ * At the tail end of the assembly line, the oldest cargo blocks fall into
+ * the dumpster (they are purged). By contract, committed cargo blocks live for
+ * the duration of {@linkplain NotaryPolicy#blocksRetained()}-many
+ * timechain blocks, during which time a user can retrieve a committed
+ * crumtrail.
+ * </p>
  */
 public class CargoChain implements Channel {
 
@@ -149,6 +161,9 @@ public class CargoChain implements Channel {
   
   
   
+  public NotaryLog log() {
+    return log;
+  }
   
   
   
@@ -454,7 +469,7 @@ public class CargoChain implements Channel {
         }
       case LONE:
         Crum crum = block.findLoneCommit();
-        if (crum.hash().equals(hash)) {
+        if (crum != null && crum.hash().equals(hash)) {
           // var blockProof = timechain.getBlockProof(block.blockNo());
           var crumtrail = Crumtrail.newLoneTrail(blockProof, crum);
           return new Receipt(crumtrail);
@@ -570,26 +585,19 @@ public class CargoChain implements Channel {
     }
     
     
-    final int indexOfLastPurgable; // (inc)
+    final int indexOfLastPurgable; // (exc)
     {
       int index =
           Collections.binarySearch(
               Lists.map(all, BlockDir::blockNo),
               lastPurgableNo);
-      if (index >= 0)
-        indexOfLastPurgable = index;
-      else {
-        // (redundant arithmetic, but to be clear..)
-        int insertIndex = -1 - index;
-        indexOfLastPurgable = insertIndex - 1;
-        if (indexOfLastPurgable == -1)
-          return 0;
-      }
-      
-      assert indexOfLastPurgable >= 0;
+      indexOfLastPurgable = index >= 0 ? index + 1 : -1 - index;
     }
+
+    if (indexOfLastPurgable == 0)
+      return 0;
     
-    var purgableBlockDirs = all.subList(0, indexOfLastPurgable + 1);
+    var purgableBlockDirs = all.subList(0, indexOfLastPurgable);
     
     File graveyard = graveyardDir();
     
@@ -638,7 +646,7 @@ public class CargoChain implements Channel {
 
     
     log.info(
-        "[PURGE]: " + Strings.nOf(tally, "block") + " removed; " +
+        "         " + Strings.nOf(tally, "cargo block") + " removed; " +
         Strings.nOf(errors, "error"));
     
     

@@ -14,7 +14,7 @@ public class PurgeRun extends Run {
   
   
   
-  private int cargoBlocksPurged;
+  private volatile int cargoBlocksPurged;
   
 
   public PurgeRun(CargoChain cargoChain) {
@@ -24,7 +24,6 @@ public class PurgeRun extends Run {
 
   @Override
   protected void runImpl() {
-    cargoBlocksPurged = 0;
     cargoBlocksPurged = cargoChain.purgeInactiveBlocks();
   }
   
@@ -33,13 +32,13 @@ public class PurgeRun extends Run {
   /**
    * @return {@link #cargoBlocksPurged()} {@code > 0}
    */
-  public synchronized boolean advanced() {
+  public boolean advanced() {
     return cargoBlocksPurged > 0;
   }
   
 
   /** Number of cargo blocks purged in the last run. */
-  public synchronized int cargoBlocksPurged() {
+  public int cargoBlocksPurged() {
     return cargoBlocksPurged;
   }
 

@@ -34,10 +34,16 @@ public class CommitRun extends Run {
    */
   @Override
   protected void runImpl() {
-    preCommitNo = postCommitNo = crumCount = 0;
-    this.preCommitNo = cargoChain.timechain().size();
-    this.crumCount = cargoChain.buildAndCommit();
-    this.postCommitNo = cargoChain.timechain().size();
+    synchronized (this) {
+      preCommitNo = postCommitNo = crumCount = 0;
+      this.preCommitNo = cargoChain.timechain().size();
+    }
+    int crums = cargoChain.buildAndCommit();
+    long commitNo = cargoChain.timechain().size();
+    synchronized (this) {
+      this.crumCount = crums;
+      this.postCommitNo = commitNo;
+    }
   }
   
   

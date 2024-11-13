@@ -9,13 +9,13 @@ import java.nio.channels.Channel;
 import io.crums.tc.ChainParams;
 
 /**
- * A flapping (timed) daemon.
+ * Managed {@code Runnable} task.
  * 
  * @see #run()
  * @see #stop()
  * @see #isOpen()
- * @see #ready()
  * @see #sleepMillis()
+ * @see Run
  */
 public class Daemon<T extends Run> implements Runnable, Channel {
   
@@ -26,6 +26,7 @@ public class Daemon<T extends Run> implements Runnable, Channel {
   public final long MAX_SLEEP = 365 * 24 * 3600 * 1000;
   
   /**
+   * <h4>Note</h4>
    * Lock held (synchronized section) while waiting (sleeping).
    * Reason why we wait ({@code Object.wait(..)}), instead of sleep
    * {@code Thread.sleep(..)} is to facilitate wake-ups, shutdowns or
@@ -34,26 +35,26 @@ public class Daemon<T extends Run> implements Runnable, Channel {
    * directly interrupting it.
    */
   protected final Object lock = new Object();
+  
   protected final T job;
   
-  private int readyCount;
-  private int runCount;
-  private int successCount;
-  private boolean stop;
+  // private int readyCount;
+  private long runCount;
+  private long successCount;
+  private volatile boolean stop;
   
   
-  private void clear() {
-    runCount = successCount = 0;
-    stop = false;
-    readyCount = 1;
-  }
+  // private void clear() {
+  //   runCount = successCount = 0;
+  //   stop = false;
+  // }
   
   
   
   
   public Daemon(T job) {
     this.job = job;
-    if (job.blockFrequency() <= 0 ||
+    if (job.blockFrequency() <= 0.01 ||
         sleepMillis() == 0 ||
         sleepMillis() > MAX_SLEEP)
       
@@ -70,40 +71,53 @@ public class Daemon<T extends Run> implements Runnable, Channel {
 
   /**
    * Runs the loop while {@linkplain #isOpen() open}. In each
-   * round of the loop, if {@linkplain #ready() ready}, the 
-   * {@linkplain #getJob() job} is run; if not ready, then
-   * the thread waits {@linkplain #sleepMillis()}, before
-   * trying {@code ready()} again.
+   * round of the loop, the underlying {@linkplain #getJob() job}
+   * is first run, and then the thread waits {@linkplain #sleepMillis()},
+   * before the next run.
+   * 
    */
   @Override
   public void run() {
     
-    clear();
+    if (!isOpen())
+      throw new IllegalStateException(this + " is closed");
     
+    job.log().info("Starting daemon: " + job.name());
+
+
     while (isOpen()) {
-      
-      while (!ready()) {
-        
-        try {
-          synchronized (lock) {
-            if (stop)
-              return;
-            lock.wait(sleepMillis());
-          }
-        } catch (InterruptedException ix) {
-          Thread.interrupted();
-          break;  // from while (!ready
+
+      // run the job
+      try {
+        job.run();
+        ++runCount;
+        if (job.succeeded())
+          ++successCount;
+        else if (job.hasException()) {
+          job.log().error(job.name() + " failed: " + job.getException() + " exiting");
+          break;
         }
-        continue;
-        
-      } // while (!ready
-      
-      job.run();
-      ++runCount;
-      if (job.succeeded())
-        ++successCount;
-      
-    } // while (isOpen
+
+      } catch (Exception x) {
+        job.log().error(
+            job.name() +
+            " encountered an error. Stopping daemon. Detail: " + x);
+        break;
+      }
+
+      // sleep
+      try {
+        synchronized (lock) {
+          if (stop)
+            break;
+          lock.wait(sleepMillis());
+        }
+      } catch (InterruptedException ix) {
+        Thread.interrupted();
+        job.log().info(job.name() + " exiting via interrupt");
+        break;
+      }
+    }
     
   }
   
@@ -119,7 +133,7 @@ public class Daemon<T extends Run> implements Runnable, Channel {
   
   
   /**
-   * Milliseconds waited after not {@linkplain #ready() ready}.
+   * Milliseconds waited.
    * 
    * @return defaults to
    *  {@code (long) (chainParams().blockDuration() / getJob().blockFrequency()}
@@ -128,59 +142,25 @@ public class Daemon<T extends Run> implements Runnable, Channel {
     return (long) (chainParams().blockDuration() / job.blockFrequency());
   }
   
-  /**
-   * Determines whether the {@linkplain Run run} is ready to execute.
-   * If this method returns {@code true}, then on return the main loop
-   * immediately executes (runs) the {@linkplain #getJob() job};
-   * if {@code false}, then on return the current thread <em>waits</em>
-   * on the {@linkplain #lock lock}'s monitor {@linkplain #sleepMillis()}
-   * milliseconds.
-   * 
-   * <h4>Default Implementation</h4>
-   * <p>
-   * By default, this flaps on and off every other time invoked,
-   * but stays on twice in succession every 33rd time.
-   * </p>
-   * <h5>Rationale</h5>
-   * <p>
-   * Our tasks are typically scheduled to run with a period of one
-   * block duration. There are 2 considerations with regard to timing:
-   * </p>
-   * <ol><li>
-   * The job itself takes time to complete, which in turn eats into
-   * the time we must wait (the block duration).
-   * </li>
-   * <li>
-   * Periodicity aside, the actual time a job begins (its <em>phase</em>,
-   * if you will) matters. If it starts at the wrong point in the period,
-   * it may settle nearly one block behind from when it should be scheduled.
-   * Hence this simple jiggling.
-   * </li></ol>
-   */
-  public boolean ready() {
-    if ((++readyCount & 2) == 0) {
-      if ((readyCount - 1) % 33 == 0) {
-        ++readyCount;
-        return false;
-      }
-      return true;
-    }
-    return readyCount % 33 == 0;
-  }
   
   
   /** Signals the daemon thread to stop. */
   public void stop() {
+    stop = true;
     synchronized (lock) {
-      stop = true;
-      lock.notify();
+      lock.notifyAll();
     }
   }
   
   
-  /** Returns the number of times the job has been run. */
-  public int runCount() {
+  /** Returns the number of times the job has run. */
+  public long runCount() {
     return runCount;
+  }
+  
+  /** Returns the number of times the job has run and succeeded. */
+  public long successCount() {
+    return successCount;
   }
   
   
@@ -188,10 +168,8 @@ public class Daemon<T extends Run> implements Runnable, Channel {
    * An instance is open until {@linkplain #stop() stop}ped.
    */
   @Override
-  public boolean isOpen() {
-    synchronized (lock) {
-      return !stop;
-    }
+  public final boolean isOpen() {
+    return !stop;
   }
   
   
@@ -201,4 +179,11 @@ public class Daemon<T extends Run> implements Runnable, Channel {
     stop();
   }
 
+
+  @Override
+  public String toString() {
+    return "Daemon<" + job.name() + ">";
+  }
+
 }
+

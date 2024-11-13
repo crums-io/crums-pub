@@ -6,17 +6,19 @@ package io.crums.tc.notary.d;
 import java.util.Objects;
 
 import io.crums.tc.notary.CargoChain;
+import io.crums.tc.notary.NotaryLog;
 
 /**
  * Base run job factored out of 2 similar classes.
  * Instances are designed to be run multiple times.
+ * 
  */
 public abstract class Run implements Runnable {
   
   
   protected final CargoChain cargoChain;
   
-  private Exception error;
+  private volatile Exception error;
   
   
   protected Run(CargoChain cargoChain) {
@@ -33,12 +35,15 @@ public abstract class Run implements Runnable {
    * method (if overridden).
    */
   @Override
-  public final synchronized void run() {
+  public final void run() {
     
     error = null;
     
-    if (!cargoChain.isOpen())
+    if (!cargoChain.isOpen()) {
+      cargoChain.log().error(
+        "Cargo chain is closed.. " + getClass().getSimpleName());
       return;
+    }
     
     try {
       runImpl();
@@ -46,6 +51,11 @@ public abstract class Run implements Runnable {
       this.error = x;
       exceptionCaught(x);
     }
+  }
+
+
+  public NotaryLog log() {
+    return cargoChain.log();
   }
   
   
@@ -82,9 +92,17 @@ public abstract class Run implements Runnable {
   
   
   /** Returns any exception caught during the last run; {@code null}, o.w. */
-  public final synchronized Exception getException() {
+  public final Exception getException() {
     return error;
   }
+
+
+  public final boolean hasException() {
+    return error != null;
+  }
+
+
+
   
   /**
    * Reports whether the last run succeeded.
@@ -92,7 +110,7 @@ public abstract class Run implements Runnable {
    * @return {@code advanced() && getException() == null}
    */
   public final boolean succeeded() {
-    return advanced() && getException() == null;
+    return advanced() && !hasException();
   }
   
   
@@ -104,5 +122,13 @@ public abstract class Run implements Runnable {
   public abstract boolean advanced();
   
   
+  /**
+   * Returns the job name.
+   * 
+   * @return {@code getClass().getSimpleName()}
+   */
+  public String name() {
+    return getClass().getSimpleName();
+  }
 
 }

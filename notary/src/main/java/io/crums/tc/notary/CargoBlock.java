@@ -31,19 +31,27 @@ import io.crums.util.RandomId;
 import io.crums.util.TaskStack;
 
 /**
+ * Each cargo block is associated with a new (committed or to-be-committed)
+ * timechain block.
  * 
+ * <h2>FIXME</h2>
+ * <p>
+ * There should only be a single cargo-build file, not 2. This flaw presents
+ * race-conditions in which the timechain could get corrupted.
+ * </p>
  */
 public class CargoBlock {
   
   /**
-   * State of an instance.
+   * State of an instance. Note, we'll need an EMPTY case in this enumeration
+   * (see race condition note in {@link CargoBlock} class description).
    * 
    * @see CargoBlock#state()
    */
   public enum State {
     /** Not built. */
     UNBUILT,
-    /** Single crum makes cargo hash: whash file exists. */
+    /** One or zero crums makes cargo hash: whash file exists. */
     LONE,
     /** Merkle tree root makes cargo hash: mrkl file exists. */
     MRKL;
@@ -501,64 +509,53 @@ public class CargoBlock {
   }
   
   
-  public int crumsBuilt() {
-    
-    try (var closer = new TaskStack()) {
-      
-      return 0;
-    } catch (TimeChainException tcx) {
-      throw tcx;
-    } catch (Exception x) {
-      
-      var nx = new NotaryException(
-          "on reading cargo hash [" + blockNo +
-          "], detail: " + x.getMessage(), x);
-      
-      log.fatal(nx);
-      throw nx;
-    }
-  }
   
   
-  
-  public CargoHash cargoHash() {
+  /**
+   * Returns the cargo hash. Must already be written.
+   */
+  private CargoHash cargoHash() throws NotaryException {
     
     try (var closer = new TaskStack()) {
 
-//      File mrklFile = mrklFile();
-//      if (mrklFile.exists()) {
-//        var tree = new CrumTreeFile(mrklFile);
-//        closer.pushClose(tree);
-//        return ByteBuffer.wrap(tree.hash());
-//      }
-//      
-//      File whashFile = whashFile();
-//      if (!whashFile.exists())
-//        return null;
-//      
-//      long len = whashFile.length();
-//      if (len == WHASH_LEN) {
-//        var buf = FileUtils.loadFileToMemory(whashFile);
-//        return buf.limit(Constants.HASH_WIDTH);
-//        
-//      } else if (len == Constants.HASH_WIDTH) {
-//        log.warning(
-//            "ignoring empty cargo block [" + blockNo + "]");
-//      } else {
-//        log.warning(
-//            "cargo block [" + blockNo + "] " + WHASH +
-//            " file is wrong length (" + len +
-//            "); treating as if empty");
-//      }
-//      return Constants.DIGEST.sentinelHash();
-    
-      return null;
+      ByteBuffer hash;
+      int cc;
+
+      File mrklFile = mrklFile();
+      if (mrklFile.exists()) {
+        var tree = new CrumTreeFile(mrklFile);
+        closer.pushClose(tree);
+        hash = ByteBuffer.wrap(tree.hash());
+        cc = tree.idx().count();
+      } else {
+        File whashFile = whashFile();
+        if (!whashFile.exists())
+          throw new NotaryException(
+            "failed to find cargo hash file in cargo block [" +
+            blockNo() + "]");
+        
+        final long len = whashFile.length();
+        if (len == Constants.HASH_WIDTH) {
+          hash = Constants.DIGEST.sentinelHash();
+          cc = 0;
+        } else if (len == WHASH_LEN) {
+          hash =
+            FileUtils.loadFileToMemory(whashFile).limit(Constants.HASH_WIDTH);
+          cc = 1;
+        } else {
+          throw new NotaryException(
+            "illegal file length for " + whashFile + ": " + whashFile.length());
+        }
+      } 
+
+      return new CargoHash(hash, cc);
+
     } catch (TimeChainException tcx) {
       throw tcx;
     } catch (Exception x) {
       
       var nx = new NotaryException(
-          "on reading cargo hash [" + blockNo +
+          "on reading cargo hash in block [" + blockNo +
           "], detail: " + x.getMessage(), x);
       
       log.fatal(nx);

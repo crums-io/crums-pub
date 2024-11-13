@@ -18,6 +18,7 @@ public abstract class NotaryLog {
 
   public abstract void info(String msg);
   public abstract void warning(String msg);
+  public abstract void error(String msg);
   public abstract void fatal(Throwable error);
   
   
@@ -43,6 +44,11 @@ public abstract class NotaryLog {
     }
 
     @Override
+    public void error(String error) {
+      logger.log(Level.ERROR, error);
+    }
+
+    @Override
     public void fatal(Throwable error) {
       logger.log(Level.ERROR, error.toString());
     }
@@ -54,6 +60,8 @@ public abstract class NotaryLog {
     public void info(String msg) {  }
     @Override
     public void warning(String msg) {  }
+    @Override
+    public void error(String error) {  }
     @Override
     public void fatal(Throwable error) {  }
   }

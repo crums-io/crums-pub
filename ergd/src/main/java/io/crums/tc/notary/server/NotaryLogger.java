@@ -32,6 +32,11 @@ public class NotaryLogger extends NotaryLog {
   }
 
   @Override
+  public void error(String msg) {
+    log.log(Level.SEVERE, msg);
+  }
+
+  @Override
   public void fatal(Throwable error) {
     log.log(Level.SEVERE, error.getMessage(), error);
   }

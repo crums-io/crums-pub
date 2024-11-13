@@ -17,7 +17,7 @@ public class EntropyRun extends Run {
   private final SecureRandom random;
   
   
-  private boolean finished;
+  private volatile boolean finished;
 
   protected EntropyRun(CargoChain cargoChain) {
     super(cargoChain);
@@ -43,21 +43,24 @@ public class EntropyRun extends Run {
   }
 
   @Override
-  public synchronized boolean advanced() {
+  public boolean advanced() {
     return finished;
   }
   
 
 
   /**
-   * Since we want to ensure in <em>every</em> block,
-   * twice every block.
+   * We aim for <em>every</em> block.
+   * <h4>Note</h4>
+   * <p>
+   * Still experimenting with optimal value.
+   * </p>
    * 
-   * @return 2.0
+   * @return 2.5
    */
   @Override
   public float blockFrequency() {
-    return 2f;
+    return 2.5f;
   }
 
 }
