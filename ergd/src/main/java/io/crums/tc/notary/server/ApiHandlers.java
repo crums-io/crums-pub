@@ -8,11 +8,16 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.function.Predicate;
 
@@ -23,12 +28,15 @@ import io.crums.sldg.json.HashEncoding;
 import io.crums.tc.BlockProof;
 import io.crums.tc.Constants;
 import io.crums.tc.Crum;
+import io.crums.tc.Crumtrail;
 import io.crums.tc.Receipt;
 import io.crums.tc.json.BlockProofParser;
+import io.crums.tc.json.CrumtrailParser;
 import io.crums.tc.json.NotaryPolicyParser;
 import io.crums.tc.json.ReceiptParser;
 import io.crums.tc.notary.Notary;
 import io.crums.util.Lists;
+import io.crums.util.json.simple.JSONObject;
 
 
 /**
@@ -36,81 +44,84 @@ import io.crums.util.Lists;
  */
 public class ApiHandlers {
   
-  // (future features commented out.. not presently used)
 
-  // final static String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
-  // final static String HTTP_DATE_GMT_TIMEZONE = "GMT";
+  final static String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
+  final static String HTTP_DATE_GMT_TIMEZONE = "GMT";
   
   
-  
+  static DateFormat newGmtDateFormat() {
+    var dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+    dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+    return dateFormatter;
+  }
   
 
-    /**
-     * Picks the encoding from the given list of hashes. It must be
-     * one or the other; mixed encodings are not supported. If one cannot
-     * be picked, then a bad-request (400) is sent, and null is returned.
-     */
-    static HashEncoding pickEncoding(
-        List<String> hashes, HttpExchange exchange)
-            throws IOException {
-      
-      final int len = hashes.get(0).length();
-      final HashEncoding encoding;
-      if (len == 43) {
-        encoding = HashEncoding.BASE64_32;
-      } else if (len == 64) {
-        encoding = HashEncoding.HEX;
-      } else {
-        HttpServerHelp.sendBadRequest(
-            exchange,
-            "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
-            "=" + hashes.get(0));
-        return null;
-      }
-      for (int index = hashes.size(); index-- > 1; ) {
-        int len2 = hashes.get(index).length();
-        if (len2 != len) {
-          String msg;
-          if (len2 + len == 43 + 64) {
-            msg = 
-                "mixed hash encodings are not supported: " +
-                Constants.Rest.QS_HASH + "=" + hashes.get(0) + " ; " +
-                Constants.Rest.QS_HASH + "=" + hashes.get(index);
-          } else {
-            msg =
-                "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
-                "=" + hashes.get(index);
-          }
-
-          HttpServerHelp.sendBadRequest(exchange,msg);
-          return null;
-        } // if (len2 != len
-      } // for
-      
-      return encoding;
+  /**
+   * Picks the encoding from the given list of hashes. It must be
+   * one or the other; mixed encodings are not supported. If one cannot
+   * be picked, then a bad-request (400) is sent, and null is returned.
+   */
+  static HashEncoding pickEncoding(
+      List<String> hashes, HttpExchange exchange)
+          throws IOException {
+    
+    final int len = hashes.get(0).length();
+    final HashEncoding encoding;
+    if (len == 43) {
+      encoding = HashEncoding.BASE64_32;
+    } else if (len == 64) {
+      encoding = HashEncoding.HEX;
+    } else {
+      HttpServerHelp.sendBadRequest(
+          exchange,
+          "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
+          "=" + hashes.get(0));
+      return null;
     }
-    
-    
-    
-    /**
-     * Returns the given {@code hash} as a 32-byte buffer. If malformed,
-     * then a bad-request (400) is sent and {@code null} is returned.
-     */
-    static ByteBuffer toBuffer(
-        String hash, HashEncoding encoding, HttpExchange exchange)
-            throws IOException {
-      
-      try {
-        return ByteBuffer.wrap(encoding.decode(hash));
-      
-      } catch (Exception x) {
-        HttpServerHelp.sendBadRequest(
-            exchange,
-            "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
-            "=" + hash);
+    for (int index = hashes.size(); index-- > 1; ) {
+      int len2 = hashes.get(index).length();
+      if (len2 != len) {
+        String msg;
+        if (len2 + len == 43 + 64) {
+          msg = 
+              "mixed hash encodings are not supported: " +
+              Constants.Rest.QS_HASH + "=" + hashes.get(0) + " ; " +
+              Constants.Rest.QS_HASH + "=" + hashes.get(index);
+        } else {
+          msg =
+              "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
+              "=" + hashes.get(index);
+        }
+
+        HttpServerHelp.sendBadRequest(exchange,msg);
         return null;
-      }
+      } // if (len2 != len
+    } // for
+    
+    return encoding;
+  }
+  
+  
+  
+  /**
+   * Returns the given {@code hash} as a 32-byte buffer. If malformed,
+   * then a bad-request (400) is sent and {@code null} is returned.
+   */
+  static ByteBuffer toBuffer(
+      String hash, HashEncoding encoding, HttpExchange exchange)
+          throws IOException {
+    
+    try {
+      return ByteBuffer.wrap(encoding.decode(hash));
+    
+    } catch (Exception x) {
+      HttpServerHelp.sendBadRequest(
+          exchange,
+          "does not parse to 32-byte hash: " + Constants.Rest.QS_HASH +
+          "=" + hash);
+      return null;
     }
+  }
 
 
   
@@ -493,11 +504,8 @@ public class ApiHandlers {
               queryMap,
               Constants.Rest.QS_HASH,
               exchange);
-      
       if (strHash == null)
         return;
-      
-      
 
       Optional<HashEncoding> encOpt = getEncoding(queryMap, exchange);
       if (encOpt == null)
@@ -546,7 +554,7 @@ public class ApiHandlers {
       HashEncoding outCodec = encOpt.orElse(HashEncoding.BASE64_32);
       Object json = ReceiptParser.forEncoding(outCodec).toJsonObject(rcpt);
       
-      HttpServerHelp.sendJson(exchange, 200, json);
+      HttpServerHelp.sendJson(exchange, rcpt.hasTrail() ? 200 : 202, json);
         
     }
     
@@ -658,8 +666,100 @@ public class ApiHandlers {
     }
      
   }
-  
-  
+
+
+  public static class VerifyHandler extends Base {
+
+    final SimpleDateFormat dateFormatter;
+
+    public final static String CRUMTRAIL = "crumtrail";
+
+    public VerifyHandler(Notary notary, ServerSettings settings) {
+      super(notary, settings);
+      this.dateFormatter = new SimpleDateFormat(HTTP_DATE_FORMAT, Locale.US);
+      dateFormatter.setTimeZone(TimeZone.getTimeZone(HTTP_DATE_GMT_TIMEZONE));
+    }
+
+
+
+    
+    
+
+    @Override
+    protected void handleImpl(HttpExchange exchange) throws IOException {
+      
+      if (!HttpServerHelp.screenGetOnly(exchange))
+        return;
+      
+      var queryMap = HttpServerHelp.queryMap(exchange);
+      String json;
+      {
+        var list = queryMap.get(CRUMTRAIL);
+        if (list == null || list.size() != 1) {
+          String msg =
+              (list == null || list.size() == 0) ?
+                  "\"" + CRUMTRAIL + "\" parameter missing in request URI" :
+                  "multiple \"" + CRUMTRAIL + "\" parameters in request URI";
+          
+          HttpServerHelp.sendBadRequest(exchange, msg);
+          return;
+        }
+
+        json = list.getFirst();
+        if (json.isEmpty()) {
+          var msg = "\"" + CRUMTRAIL + "\" parameter value missing in request URI";
+          HttpServerHelp.sendBadRequest(exchange, msg);
+          return;
+        }
+      }
+
+
+      // create a hex trail parser :/
+      // Ugh.. I shouldn't have to pick the hash encoding on the read path
+      // no time to fix.. FIXME noted in io.crums.tc.json.BaseParser
+      var parser = new CrumtrailParser(false);
+
+      Crumtrail trail;
+      try {
+        trail = parser.toEntity(json);
+      } catch (Exception x) {
+        var msg =
+            "Malformed request\nType: " + x.getClass().getSimpleName() +
+            "\nDetail: " + x.getMessage();
+        HttpServerHelp.sendBadRequest(exchange, msg);
+        return;
+      }
+
+      Crumtrail patchedTrail;
+      try {
+        var chainState = notary.stateProof(trail.blockNo()).compress();
+        patchedTrail = trail.setBlockProof(chainState);
+      
+      } catch (Exception x) {
+        // FIXME: this sends a bad request if the engine fails for *any* reason
+        // (i.e. not necessarily a bad request)
+        var msg = "No such crumtrail committed to chain.";
+        if (trail.blockNo() <= notary.blockCount()) {
+          msg += "\nError Type: " + x.getClass().getSimpleName();
+          msg += "\nDetail: " + x.getMessage();
+        }
+        HttpServerHelp.sendBadRequest(exchange, msg);
+        return;
+      }
+
+      var jObj = new JSONObject();
+      var comment =
+          trail.crum().hashHex() + " witnessed on " +
+          newGmtDateFormat().format(new Date(trail.crum().utc())) +
+          ", committed in block [" + trail.blockNo() + "]";
+      jObj.put("summary", comment);
+      jObj = parser.injectEntity(patchedTrail, jObj);
+      
+      HttpServerHelp.sendJson(exchange, 200, jObj);
+    }
+     
+  }
+
 
 }
 

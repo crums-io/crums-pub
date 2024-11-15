@@ -45,6 +45,9 @@ public record UriHandler(String uri, HttpHandler handler) {
         Constants.Rest.STATE_URI,
         new ApiHandlers.StateHandler(notary, settings)),
       new UriHandler(
+        Constants.Rest.VERIFY_URI,
+        new ApiHandlers.VerifyHandler(notary, settings)),
+      new UriHandler(
         Constants.Rest.H_CODEC_URI,
         new UtilHandlers.HashConverter()),
       new UriHandler(

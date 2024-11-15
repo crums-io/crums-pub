@@ -644,10 +644,10 @@ public class CargoChain implements Channel {
     }
     
 
-    
-    log.info(
-        "         " + Strings.nOf(tally, "cargo block") + " removed; " +
-        Strings.nOf(errors, "error"));
+    if (tally > 1 || errors > 0)
+      log.info(
+          "         " + tally + " cargo blocks removed; " +
+          Strings.nOf(errors, "error"));
     
     
     return tally;

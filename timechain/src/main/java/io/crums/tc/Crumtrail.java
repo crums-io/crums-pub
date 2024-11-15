@@ -127,11 +127,28 @@ public abstract class Crumtrail implements Serial {
    * Returns the hash observed in the block. When the block
    * records multiple crums, it's a hash of the collection
    * (root of a Merkle tree); when it records a single
-   * crum, this is just the hash of that one crum.
+   * crum, this is just the hash of that one (40-byte) crum.
    * 
    * @see #crumsInBlock()
    */
   public abstract ByteBuffer cargoHash();
+
+  /**
+   * Returns the block hash at this trail's block no.
+   * 
+   * @return {@code blockProof().chainState().getRowHash(blockNo())}
+   * @see #blockNo()
+   */
+  public final ByteBuffer blockHash() {
+    return blockProof.chainState().getRowHash(blockNo());
+  }
+  
+  /**
+   * Returns the block number to which the crum's witness hash is committed.
+   */
+  public final long blockNo() {
+    return blockProof.chainParams().blockNoForUtc(crum().utc());
+  }
   
   /**
    * Returns the number of crums encoded in the cargo hash.
@@ -163,14 +180,6 @@ public abstract class Crumtrail implements Serial {
   }
   
 
-  
-  /**
-   * Returns the block number the crum's witness hash is
-   * recorded in the chain.
-   */
-  public final long blockNo() {
-    return blockProof.chainParams().blockNoForUtc(crum().utc());
-  }
   
   
   

@@ -20,7 +20,8 @@
   <link href="css/bootstrap.min.css" rel="stylesheet">
   <link href="css/jquery.slim.min.css" rel="stylesheet">
   
-    <script src="./js/asmcrypto.min.0.22.0.js"></script>
+  <script src="./js/asmcrypto.min.0.22.0.js"></script>
+
 	<script type="text/javascript" language="javascript">
 	    
 	    function on_hash_done(hash, time_elapsed_seconds) {
@@ -104,13 +105,48 @@
 	    
 	    
 	    function woopsMsg(status) {
-	      return "Woops! Something went wrong :( <br/> status : " + status;
+        if (status == 0) {
+          return "Connection failure: server not reached."
+        } else {
+          return "Woops! Something went wrong :( <br/> status : " + status;
+        }
 	    }
 	    
-	    
+	    // FIXME: remove
 	    function witnessDate(responseObj) {
-	      return new Date(responseObj.crum.utc);
+	      return new Date(responseObj.utc);
 	    }
+
+	    
+      // TODO make pretty :/
+      function prettyDateHtml(date) {
+        var html =
+            date.getFullYear() + "-" +
+            padDigit(date.getMonth() + 1) + "-" +
+            padDigit(date.getDate()) +
+            "&nbsp; &nbsp; &nbsp; (UTC: " + date.getTime() + ")";
+        
+        return html;
+      }
+
+      function padDigit(num) {
+        var out;
+        if (num < 10)
+          out = "0";
+        else
+          out = "";
+        return out + num;
+      }
+	    
+
+      function crumUtc(responseObj) {
+        return responseObj.utc;
+      }
+
+      function trailUtc(responseObj) {
+        return responseObj.cargo_proof.utc;
+      }
+
 	    
 	    
 	    function witnessHash() {
@@ -119,79 +155,217 @@
         document.getElementById("summary").innerHTML = "<br/><br/>";
         document.getElementById("crums_result").innerHTML = "";
 	      
+
 	      var now = new Date();
 	      
         var hex = document.getElementById("hex").value;
+
+        var uri = "/api/";
+
+        {
+          var crum = getCrum();
+          console.log(crum);
+          if (crum != null && crum.w_hash == hex) {
+            uri += "update?enc=hex&utc=" + crum.utc + "&hash=" + hex;
+          } else {
+            uri += "witness?enc=hex&hash=" + hex;
+            removeCrum();
+          }
+          console.log(uri);
+
+        }
+
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
         
           var message;
           var columnDecoration;
-          var crumsResult = "";
-          
+          var crumsResult;
           
           if (this.readyState != 4)
             return;
           
           
-          
-          
-          
-          if (this.status == 200 || this.status == 202) {
+          if (this.status == 202 || this.status == 200) {
             
             var responseObj = JSON.parse(this.responseText);
-            
             crumsResult = JSON.stringify(responseObj, undefined, 4);
-            
-            var crumDate = witnessDate(responseObj);
-            message = "Witnessed on " + crumDate + " <br/> ";
-            
-            if (responseObj.status == "complete") {
-              
-            	var urlEnc = "/api/verify_stamp?crumtrail=" + encodeURIComponent(JSON.stringify(responseObj));
-            	message += "Bookmark this <a href=\"" + urlEnc + "\">WITNESS PROOF<a>, or<br/>"
-              message += "Copy &amp; Paste its Crumtrail for your records:";
-              columnDecoration = "crumtrail";
-            
-            } else {
-            
+            var trailLabel = hex.substring(0, 7) + "..";
+
+            if (this.status == 202) {
+              setCrum(this.responseText);
+
+              // crum created; crumtrail pending
+              var utc = responseObj.utc;
+              message = trailLabel + " witnessed <br/>" + new Date(utc) + " <br/> ";
+              var countdownMillis = millisToCommit(utc) + 2500;
+              var coutdownSeconds = Math.floor(countdownMillis / 1000);
+              message +=
+                  "A permanent trail will be available in roughly " +
+                  coutdownSeconds + " seconds.";
               columnDecoration = "crum";
-              var deltaMillis = now.getTime() - crumDate.getTime();
-              message += "A permanent Crumtrail (which you keep) will be generated in ";
-              
-              if (deltaMillis > 250000)
-                message += "seconds:";
-              else if (deltaMillis > 230000)
-                message += "less than a minute:";
-              else if (deltaMillis > 200000)
-                message += "about a minute:";
-              else if (deltaMillis > 130000)
-                message += "2 minutes or less:";
-              else
-                message += "minutes:";
-                
+            } else {
+              // status 200
+              // crum trail found in cargo chain
+              var utc = trailUtc(responseObj);
+            	var urlEnc =
+                  "/api/util/verify?crumtrail=" +
+                  encodeURIComponent(JSON.stringify(responseObj));
+
+            	message =
+                  "Bookmark crumtrail <a href=\"" + urlEnc + "\">" + trailLabel +
+                  "<a> witnessed<br/>" +
+                  new Date(utc) + "<br/>committed to block [" + utcToBlockNo(utc) + "]";
+              columnDecoration = "crumtrail";
             }
-            
+
+          } else if (this.status == 400) {
+            message =
+              "<i>Hash seems mangled.</i> Server says: <pre>\n" +
+              this.responseText + "</pre>";
+            columnDecoration = "!";
+            crumsResult = "";
           } else {
-              message = woopsMsg(this.status);
-              columnDecoration = "!";
+            // TODO: status == 0 means network failure
+            
+            message = woopsMsg(this.status);
+            columnDecoration = "!";
+            crumsResult = "";
           }
             
-            
+          
           document.getElementById("crums_result_type").innerHTML = columnize(columnDecoration);
           document.getElementById("summary").innerHTML = message;
           document.getElementById("crums_result").innerHTML = crumsResult;
+
         };
 
-        xhttp.open("GET", "/api/witness?hash=" + hex, true);
+
+
+        xhttp.open("GET", uri, true);
         xhttp.send();
 	    }
+
+
+      function millisToCommit(utc) {
+        var policy = getPolicy();
+        if (policy == null)
+          return -1;
+        var blockNo = utcToBlockNo2(utc, policy);
+        var blockDuration = Math.pow(2, policy.chain_params.bin_exp);
+        var commitUtc =
+            blockNoToUtc2(blockNo + 1, policy) +
+            policy.block_commit_lag;
+        var remainingTime = commitUtc - new Date().getTime();
+        return Math.max(0, remainingTime);
+      }
+
+      function blockNoToUtc(blockNo) {
+        var policy = getPolicy();
+        if (policy == null)
+          return 0;
+        return blockNoToUtc2(blockNo, policy);
+      }
+
+      function blockNoToUtc2(blockNo, policy) {
+        var inceptUtc = policy.chain_params.incept_utc;
+        var blockDuration = Math.pow(2, policy.chain_params.bin_exp);
+        return inceptUtc + blockDuration * (blockNo - 1);
+      }
+
+
+      function utcToBlockNo(utc) {
+        var policy = getPolicy();
+        if (policy == null)
+          return 0;
+        return utcToBlockNo2(utc, policy);
+      }
+
+      function utcToBlockNo2(utc, policy) {
+        var inceptUtc = policy.chain_params.incept_utc;
+        var blockDuration = Math.pow(2, policy.chain_params.bin_exp);
+        var blockIndex = Math.floor((utc - inceptUtc) / blockDuration);
+        return blockIndex + 1;
+      }
+
+
+      function removeCrum() {
+        sessionStorage.removeItem("crum");
+      }
+
+
+      function setCrum(json) {
+        sessionStorage.setItem("crum", json);
+      }
+
+      function getCrum() {
+        var json = sessionStorage.getItem("crum");
+        if (json == null)
+          return null;
+        return JSON.parse(json);
+      }
+
+      function getPolicy() {
+        var json = sessionStorage.getItem("policy");
+        if (json == null)
+          return null;
+        return JSON.parse(json);
+      }
+
+
+      function initPage() {
+        fetchPolicy(true);
+      }
+
+      function fetchPolicy(async) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState != 4)
+            return;
+          if (this.status != 200) {
+            // FIXME: display error when chain is offline for whatever reason
+            return;
+          }
+          var policyObj = JSON.parse(this.responseText);
+          var inceptUtc = policyObj.chain_params.incept_utc;
+          var binExp = policyObj.chain_params.bin_exp;
+          var duration = Math.pow(2, binExp);
+
+          sessionStorage.setItem("policy", this.responseText);
+
+          document.getElementById("inception").innerHTML =
+              prettyDateHtml(new Date(inceptUtc));
+          
+
+          document.getElementById("block_rate").innerHTML =
+              "every " + (duration / 1000.0) +
+              " seconds &nbsp; &nbsp; &nbsp; (bin exponent: " +
+              binExp + ")";
+
+          document.getElementById("commit_lag").innerHTML =
+              (policyObj.block_commit_lag / 1000.0) + " seconds";
+
+          
+          document.getElementById("blocks_retained").innerHTML =
+              policyObj.blocks_retained;
+
+          document.getElementById("blocks_searched").innerHTML =
+              policyObj.blocks_searched;
+        };
+        xhttp.open("GET", "/api/policy", async);
+        xhttp.send();
+      }
+
+
+
+      
+
 	</script>
   
 
 </head>
 
-<body>
+<body onload="initPage()">
 <!-- Navigation -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
   <div class="container">
@@ -223,14 +397,14 @@
 <div class="container">
   <div class="row">
     <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
-      <h1 class="mt-4">Timestamp a File</h1>
+      <h3 class="mt-4">Timestamp a hash or file</h3>
     </div>
     
     <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
         <div class="form-row">
           <div class="col-12 col-md-9 mb-2 mb-md-0">
             
-            <input type="text" id="hex" class="form-control" size="72" name="hash" placeholder="Enter its SHA-256 or pick the file.." />
+            <input type="text" id="hex" class="form-control" size="72" name="hash" placeholder="Enter a SHA-256 hash.." />
             
           </div>
           <div class="col-12 col-md-3">
@@ -244,8 +418,8 @@
     
       <div class="input-group mb-3">
         <div class="custom-file">
-          <input type="file" class="custom-file-input" id="file_input" onchange="on_file_select(event)" data-toggle="tooltip" title="Note the SHA-256 hash of your file is computed here by your browser; the service never sees your file.">
-          <label class="custom-file-label" for="file_input" id="choose_file">Choose file</label>
+          <input type="file" class="custom-file-input" id="file_input" onchange="on_file_select(event)" data-toggle="tooltip" title="SHA-256 hash computed by browser; contents and location are not seen by timechain">
+          <label class="custom-file-label" for="file_input" id="choose_file">or pick a file</label>
         </div>
       </div>
     
@@ -262,8 +436,37 @@
       </div>
     </div>
     <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
+      <p><br/></p>
+      <table class="table table-borderless table-sm small mb-4">
+        <thead>
+          <tr>
+            <th scope="col" colspan="4">Chain Settings</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="2">Inception</td><td colspan="2" id="inception"></td>
+          </tr>
+          <tr>
+            <td colspan="2">Block rate</td><td colspan="2" id="block_rate"></td>
+          </tr>
+          <tr>
+            <td colspan="2">Commit lag</td><td colspan="2" id="commit_lag"></td>
+          </tr>
+          <tr>
+            <td colspan="2">Blocks retained</td><td colspan="2" id="blocks_retained"></td>
+          </tr>
+          <tr>
+            <td colspan="2">Blocks searched</td><td colspan="2" id="blocks_searched"></td>
+          </tr>
+        </tbody>
+      </table>
+      
+    </div>
+    <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
           <p class="text-muted small mb-4" style="text-align:right;">&copy; 2020-2024 crums.io </p>
     </div>
+
     
   </div>
 </div>

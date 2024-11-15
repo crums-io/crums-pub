@@ -11,6 +11,11 @@ import io.crums.util.json.JsonEntityParser;
 /**
  * Boilerplate base type for parsers. Parsers commonly need
  * to know how 32-byte hashes are to be encoded.
+ * 
+ * <h2>FIXME</h2>
+ * <p>On the read-path, parsers should be able to handle either
+ * of hash encodings. This is a design flaw that rears its head
+ * again and again.</p>
  */
 public abstract class BaseParser<T> implements JsonEntityParser<T> {
 
