@@ -14,7 +14,7 @@ involves a commitment, or the potential to commit (a database transaction, for e
 In the economic sphere, we collect receipts so that parties to a transaction can be held
 accountable to their commitments. In other spheres of activity, receipts are often
 hard to come by, and when they are, hard to independently verify (e.g. verifying a copy of a
-received email). Receipts are hard to prove, particularly to a non-expert 3rd party.
+received email). Receipts are hard to prove, particularly to non-expert 3rd parties.
 I aim to change that,
 
 * to make proving things *easy*,
@@ -23,8 +23,8 @@ I aim to change that,
 * at scale.
 
 When we do that, good things will happen. It will oil commerce in good ways, create new
-opportunities, etc. To see why and how, let me first paint an unconventional viewpoint.
-I will repurpose the meaning of a few words here and there.
+opportunities, etc., etc. To see why and how, let me first paint an unconventional viewpoint.
+I will remold a few words here and there, repurposing their meanings.
 
 ## Proposition I: The World Runs on Receipts
 
@@ -54,8 +54,8 @@ how I'd classify it: if it's small, small enough to carry, it's a receipt; other
 definitely a ledger, or part of a ledger. That it's hard to pin down which it is, I think,
 underscores how related these 2 concepts are.
 
-Here's the proposition (a definition, really): every modern receipt is recorded in *some*
-ledger. A receipt, then, can be seen as a tearout of one or a few entries from a ledger.
+Here's the proposition (a definition, really):
+>  Every modern receipt is recorded in *some* ledger. A receipt, then, can be seen as a tearout of one or a few entries from a ledger.
 
 In many cases, when transacting with an outside party, an entry in one ledger references a
 receipt (an entry) from another ledger. So *receipts are both inputs to, and outputs from,
@@ -81,12 +81,12 @@ such a format can provide:
    and at what row no. they each occur in that ledger. That is, in their simplest form (without
    embedding another receipt), receipts from the same ledger are evidence of order of operations.
 9. **State Declaration.** There's a special receipt a ledger owner can periodically publish, against which all previously
-   issued receipts can be verified *offline*. These receipts (a few KBs) act like publish declarations of a ledger's latest
-   fingerprint. Aside from revealing how many rows the ledger hash, a state declaration is otherwise completely opaque.
+   issued receipts can be verified *offline*. These receipts (a few KBs) act like public declarations of a ledger's latest
+   fingerprint. Aside from revealing how many rows are in the ledger (at that snapshot), a state declaration is otherwise completely opaque.
    Because receipts are comparable, each state declaration can establish its lineage to older states.
    
 The format has other useful properties (efficient archival of multiple receipts from the same ledger,
-for e.g.) The last item in the list above hints at a *commitment scheme*.
+for e.g.). But focus on that last item in the list above: it's a *commitment*.
 
 ## Commitment Scheme
 
@@ -98,13 +98,18 @@ In crytography, a commitment scheme is a procedure, if you will, with specific p
 
 Here, by a "commitment scheme", I mean that, and a bit more. A *state declaration* (last item in the section above)
 is not just a cryptographic commitment: it's also a *contractual* commitment by the agent issuing it.
-That is, if an agent is discovered to be tampering with their ledger (their new state receipts conflict with thier
-previously declared state receipts), the ledger *they* keep (!), they may be taken to court.
+That is, if an agent is discovered to be tampering with their ledger (their new state declarations conflict with
+previous ones, old receipts conflict with the new state), the ledger *they* keep (!), they may be taken to court
+(for misrepresentation, business fraud, etc.).
+
+The *cryptographic* commitment scheme used for this format of receipts, is new. I call it a *skip ledger*.
+Its details are not central to my pitch here; its capabilities are. What's important is that there exists
+technology that allows receipts to have those properties I enumerated in the previous section.
 
 ## Identity: Whose Ledger?
  
-A ledger is known by its latest state declaration. Technically, it's identity is pinned to 
-a single 32-byte hash contained in the state structure. But whose state declaration is it?
+A ledger is known by its latest state declaration. (Technically, it's identity is pinned to 
+a single 32-byte hash contained in the state structure.) But whose state declaration is it?
 The approach taken here is much like git: every ledger (repo) is on an equal footing. Identity
 management can be layered in, or on top of, state declarations. For example, state declarations may
 be signed (using cryptographic keys issued by a reputable CA). Or a ledger's live state can be made available
