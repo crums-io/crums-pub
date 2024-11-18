@@ -81,8 +81,13 @@
       There's a good argument for a binary response format: the hash proofs are complicated, validating them requires
       deep knowledge of their structures, and tho JSON is human readable, it's still hard to interpret. So why bother?
       <ul>
+      <li>JSON is easier to handle, and being text, more "transport" friendly. Importantly, it can be
+      annotated with notes, and maybe even app-specific data, without breaking anything.
+      </li>
       <li>With use the hash proofs seem less complicated. They share a lot of similar parts. Tho a user may never
       manually parse these parts themselves, the JSON helps build a mental picture of how the hash proofs are structured.
+      (We might provide a mode that breaks block proofs into parts, so a user can more easily see how
+      the hashes in a chain's block proof evolve over time, but presently, that's beyond scope.)
       </li><li>
       The aim is to port this library to other programming languages (under the same license): in that event,
       porting the existing JSON parsers from Java to another language should provide a good first step.
@@ -115,8 +120,13 @@
                 This method is idempotent over the duration of a [timechain] block. (The no. of blocks this
                 idempotency is in effect can be configured
                 in the timechain settings, but there's no reason to, since increasing it negatively impacts scalability,
-                but does not offer any tangible user benefit.) In rare cases, this method may return a 200
+                but does not offer any tangible user benefit.)
+                </p>
+                <p>
+                In rare cases (a race between clients), this method may return a 200
                 response with a fully constructed <em>crumtrail</em> (see <a href="#update">update</a>).
+                To cover such corner cases, the optional query string parameters the
+                <a href="#update">update</a> method takes, may also be supplied.
                 </p>
               </td>
             </tr>
@@ -132,14 +142,14 @@
             <tr>
               <td>hash</td>
               <td colspan="3">
-              SHA-256 hash of the object, expressed in either 64 hex digits, or a
-              43 base64-32 digits.
+              SHA-256 hash of the object, expressed in either 64 hex digits, or
+              43 base64-32 (b64) digits.
               </td>
             </tr>
             <tr>
               <td>enc</td>
               <td colspan="3">
-              Encoding used to represent 32-byte hashes in json response. There are 2 choices:
+              Optional. Encoding used to represent 32-byte hashes in JSON response. There are 2 choices:
               <code>hex</code> and <code>b64</code> (the default).
               </td>
             </tr>
@@ -174,7 +184,7 @@
                 via the <a href="#witness">witness</a> method), if the crum's block no. has been
                 committed to the timechain; otherwise, if the crum is valid (is scheduled to be
                 committed to the timechain), then the crum is returned as-is. Finally, if the crum
-                is not valid (i.e. made up), then this method defaults to the <a href="#witness">witness</a>
+                is not valid (is expired, or made up), then this method defaults to the <a href="#witness">witness</a>
                 method.
               </td>
             </tr>
@@ -190,8 +200,8 @@
             <tr>
               <td>hash</td>
               <td colspan="3">
-              SHA-256 hash of the object witnessed, expressed in either 64 hex digits, or a
-              43 base64-32 digits.
+                SHA-256 hash of the object, expressed in either 64 hex digits, or
+                43 base64-32 (b64) digits.
               </td>
             </tr>
             <tr>
@@ -203,8 +213,26 @@
             <tr>
               <td>enc</td>
               <td colspan="3">
-              Encoding used to represent 32-byte hashes in json response. There are 2 choices:
+              Optional. Encoding used to represent 32-byte hashes in JSON response. There are 2 choices:
               <code>hex</code> and <code>b64</code> (the default).
+              </td>
+            </tr>
+            <tr>
+              <td>block</td>
+              <td colspan="3">
+              Optional. Block no. chain block proof begins at. Must be no greater than the
+              block no. utc parameter falls in. Defaults to <code>1</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>compress</td>
+              <td colspan="3">
+              Optional. Sets the compression-level of the block proof. There are two
+              levels: <code>0</code> (no compression), and <code>1</code> (the default).
+              The byte size of uncompressed block proofs scales as 
+              <b>O</b> <i>(log n)<sup><small>2</small></sup></i>, where <i>n</i> is
+              the no. of block no.s spanned; <i>compressed</i> block proofs scale as
+              <b>O</b> <i>(log log n) x log n</i>.
               </td>
             </tr>
           </tbody>
@@ -221,10 +249,9 @@
               <th scope="row">Description</th>
               <td colspan="3">
                 <p>
-                Returns a block proof asserting the hash of the latest block can be derived from a <em>skip path</em>
-                linking the genesis block to the last. The chain's inception time (genesis block), and block
-                resolution (time-binning) are also advertised. The skip path may optionally include a target
-                block no., proving the target block belongs in the timechain.
+                Returns a block proof asserting the hash of a block at some no. is derived from the hash
+                of blocks at lower no.s. If no arguments are provided, a block proof linking the genesis
+                to the latest block is returned.
                 </p>
               </td>
             </tr>
@@ -238,23 +265,35 @@
               <td></td><th scope="row" colspan="3">Paramaters</th>
             </tr>
             <tr>
-              <td>block</td>
+              <td>enc</td>
               <td colspan="3">
-              Target block no.(s) to be included in block proof. <em>Optional.</em>
+              Optional. Encoding used to represent 32-byte hashes in JSON response. There are 2 choices:
+              <code>hex</code> and <code>b64</code> (the default).
               </td>
             </tr>
             <tr>
-              <td>enc</td>
+              <td>block</td>
               <td colspan="3">
-              Encoding used to represent 32-byte hashes in json response. There are 2 choices:
-              <code>hex</code> and <code>b64</code> (the default). <em>Optional.</em>
+              Optional. Target block no.(s) to be included in block proof. By default, both
+              the genesis and latest block no.s are included.
               </td>
             </tr>
             <tr>
               <td>last</td>
               <td colspan="3">
-              If <code>true</code> (case ignored), then the latest committed block is included in
-              the proof. <em>Optional.</em> By default, the latest committed block is included.
+              Optional. If <code>true</code> (case ignored), then the latest committed block is included in
+              the proof. By default, the latest committed block is included.
+            </tr>
+            <tr>
+              <td>compress</td>
+              <td colspan="3">
+              Optional. Sets the compression-level of the block proof. There are two
+              levels: <code>0</code> (no compression), and <code>1</code> (the default).
+              The byte size of uncompressed block proofs scales as 
+              <b>O</b> <i>(log n)<sup><small>2</small></sup></i>, where <i>n</i> is
+              the no. of block no.s spanned; <i>compressed</i> block proofs scale as
+              <b>O</b> <i>(log log n) x log n</i>.
+              </td>
             </tr>
             <tr>
               <th scope="row">Response</th>
@@ -351,6 +390,121 @@
         
       
       </p>
+    <h3>Utilities</h3>
+    <p>
+    The following utility methods are included. These are not strictly part of
+    the timechain API. They are included as <i>convenience methods</i> for human
+    interaction.
+    </p>
+    <p><br/></p>
+    <p>
+
+      <table class="table" id="h_codec">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col" colspan="4">/api/util/verify</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Description</th>
+            <td colspan="3">
+              <p>
+              Verifies the given URL-encoded crumtrail is committed to the timechain.
+              The response (in JSON) is the same crumtrail, but with its block proof
+              patched to the most recent state of the chain. A human readable summary
+              precedes the crumtrail's JSON.
+              </p>
+              <p>
+              This method primarily exists so that a crumtrail may be archived as a
+              bookmark. See the <code>crum</code> CLI tool for archiving crumtrails
+              from multiple timechains.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Method</th>
+            <td>GET</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td><th scope="row" colspan="3">Paramaters</th>
+          </tr>
+          <tr>
+            <td>crumtrail</td>
+            <td colspan="3">
+            URL-encoded crumtrail JSON.
+            </td>
+          </tr>
+          <tr>
+            <td></td><th scope="row" colspan="3">Example</th>
+          </tr>
+          <tr>
+            <td colspan="4">
+            Since the state of a timechain is not known in advance (and since
+            this page is static), a ready made example cannot be provided. The
+           "Bookmark crumtrail" link on the landing page, is an example.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="table" id="h_codec">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col" colspan="4">/api/util/h_codec</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Description</th>
+            <td colspan="3">
+              <p>
+              Hash encoding translator. Converts <code>hex</code> to <code>b64</code>,
+              and viceversa. The Base64 encoding is non-standard The response is plain text.
+              </p>
+              <h4>About b64</h4>
+              <p>
+              This is slightly non-standard Base64 encoding. It uses the
+              <b>URL</b> / <b>filename-friendly</b> character-set specified in
+              <a href="https://tools.ietf.org/html/rfc4648#section-5">&sect;5 of RFC 4648</a> but
+              takes liberties (discussed tho not condoned in
+              <a href="https://tools.ietf.org/html/rfc4648#section-3.2">&sect;3.2</a>) for
+              specifying boundary conditions in a way that does not require padding for our use case.
+              Unlike in some other variants, padding bits must be set to '0', so as to preserve
+              one-to-one-ness, and are pre-pended (two '0' bits), not post-pended.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Method</th>
+            <td>GET</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td><th scope="row" colspan="3">Paramaters</th>
+          </tr>
+          <tr>
+            <td>hash</td>
+            <td colspan="3">
+            Either 64 hex digits, or 43 base64-32 (b64) digits.
+            </td>
+          </tr>
+          <tr>
+            <td></td><th scope="row" colspan="3">Example</th>
+          </tr>
+          <tr>
+            <td colspan="4">
+            <code>
+            <a href="/api/util/h_codec?hash=47qaLuWWGx3EKUCKMGpwhAblOQ1D3oRHq5yKD7cm2Na">/api/util/h_codec?hash=47qaLuWWGx3EKUCKMGpwhAblOQ1D3oRHq5yKD7cm2Na</a>
+            </code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </p>
     </div>
     <div class="col-md-10 col-lg-8 col-xl-7 mx-auto">
           <p class="text-muted small mb-4" style="text-align:right;">&copy; 2020-2024 crums.io </p>
