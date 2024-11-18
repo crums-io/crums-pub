@@ -3,7 +3,6 @@
 
 <head>
   
-  <!--base href="https://crums.io/" target="_blank" -->
   
   <!-- Required meta tags -->
   <meta charset="utf-8">
@@ -86,8 +85,11 @@
 	            document.getElementById('choose_file').innerText = e.target.files[0].name;
 	            hash_file(e.target.files[0], on_hash_done, on_hash_progress, on_hash_error);
 	            document.getElementById("crums_result_type").innerHTML = "?";
-              document.getElementById("summary").innerHTML = "<br/><br/>";
+              setSummary("<br/>");
+              setSummaryFooter("<br/>");
+
               document.getElementById("crums_result").innerHTML = "";
+
 	        }
 	    }
 	    
@@ -110,11 +112,6 @@
         } else {
           return "Woops! Something went wrong :( <br/> status : " + status;
         }
-	    }
-	    
-	    // FIXME: remove
-	    function witnessDate(responseObj) {
-	      return new Date(responseObj.utc);
 	    }
 
 	    
@@ -151,9 +148,9 @@
 	    
 	    function witnessHash() {
 	      
-	      document.getElementById("crums_result_type").innerHTML = "?";
-        document.getElementById("summary").innerHTML = "<br/><br/>";
-        document.getElementById("crums_result").innerHTML = "";
+	      // document.getElementById("crums_result_type").innerHTML = "?";
+        // document.getElementById("summary").innerHTML = "<br/><br/>";
+        // document.getElementById("crums_result").innerHTML = "";
 	      
 
 	      var now = new Date();
@@ -164,14 +161,12 @@
 
         {
           var crum = getCrum();
-          console.log(crum);
           if (crum != null && crum.w_hash == hex) {
             uri += "update?enc=hex&utc=" + crum.utc + "&hash=" + hex;
           } else {
             uri += "witness?enc=hex&hash=" + hex;
             removeCrum();
           }
-          console.log(uri);
 
         }
 
@@ -179,6 +174,7 @@
         xhttp.onreadystatechange = function() {
         
           var message;
+          var messageFooter = "";
           var columnDecoration;
           var crumsResult;
           
@@ -197,12 +193,11 @@
 
               // crum created; crumtrail pending
               var utc = responseObj.utc;
-              message = trailLabel + " witnessed <br/>" + new Date(utc) + " <br/> ";
-              var countdownMillis = millisToCommit(utc) + 2500;
+              message = trailLabel + " witnessed <br/>" + new Date(utc);
+              var countdownMillis = millisToCommit(utc);
               var coutdownSeconds = Math.floor(countdownMillis / 1000);
-              message +=
-                  "A permanent trail will be available in roughly " +
-                  coutdownSeconds + " seconds.";
+              messageFooter =
+                  "Countdown to commit: " + coutdownSeconds + " seconds";
               columnDecoration = "crum";
             } else {
               // status 200
@@ -215,7 +210,8 @@
             	message =
                   "Bookmark crumtrail <a href=\"" + urlEnc + "\">" + trailLabel +
                   "<a> witnessed<br/>" +
-                  new Date(utc) + "<br/>committed to block [" + utcToBlockNo(utc) + "]";
+                  new Date(utc);
+              messageFooter = "Committed to block [" + utcToBlockNo(utc) + "]";
               columnDecoration = "crumtrail";
             }
 
@@ -235,8 +231,15 @@
             
           
           document.getElementById("crums_result_type").innerHTML = columnize(columnDecoration);
-          document.getElementById("summary").innerHTML = message;
+          // document.getElementById("summary").innerHTML = message;
+          setSummary(message);
+          setSummaryFooter(messageFooter);
+
           document.getElementById("crums_result").innerHTML = crumsResult;
+
+          if (this.status == 202) {
+            setTimeout(seal, 1100);
+          }
 
         };
 
@@ -247,6 +250,65 @@
 	    }
 
 
+
+
+      function seal() {
+	      
+        // if the user has *changed the hash value
+        // (whatever encoding they're using.. hex or b64),
+        // then quietly abort.
+        var hex = document.getElementById("hex").value;
+
+        var crum = getCrum();
+        // console.log(crum);
+
+        
+        if (crum == null || crum.w_hash != hex)
+          return;
+
+        var millis = millisToCommit(crum.utc);
+        if (millis < 0) {
+          console.error("policy not loaded, millisToCommit returned " + millis);
+          return;
+        }
+        
+        // if zero
+        // I wanna test for zero, but don't know how js type system works
+        // (could it be a float?)
+        if (millis < 1)  {
+          witnessHash();
+        } else {
+          setCountdownToCommitMessage(millis);
+          var lap = Math.min(1100, millis);
+          setTimeout(seal, lap);
+        }
+
+      }
+
+
+      
+
+
+      function setSummary(textHtml) {
+        document.getElementById("summary").innerHTML = textHtml;
+      }
+
+
+      function setCountdownToCommitMessage(millis) {
+        var seconds = Math.floor(millis / 1000);
+        var msg = "Countdown to commit: " + seconds + " second";
+        if (seconds < .9 || seconds > 1.1)
+          msg += "s";
+        setSummaryFooter(msg);
+      }
+
+      function setSummaryFooter(textHtml) {
+        document.getElementById("summary_footer").innerHTML = textHtml;
+      }
+
+      
+
+      // includes additional 2.5 sec grace period (beyond block commit lag)
       function millisToCommit(utc) {
         var policy = getPolicy();
         if (policy == null)
@@ -255,7 +317,7 @@
         var blockDuration = Math.pow(2, policy.chain_params.bin_exp);
         var commitUtc =
             blockNoToUtc2(blockNo + 1, policy) +
-            policy.block_commit_lag;
+            policy.block_commit_lag + 2500;   // <-- 2.5 sec grace
         var remainingTime = commitUtc - new Date().getTime();
         return Math.max(0, remainingTime);
       }
@@ -298,6 +360,7 @@
         sessionStorage.setItem("crum", json);
       }
 
+      // returns a JSON object
       function getCrum() {
         var json = sessionStorage.getItem("crum");
         if (json == null)
@@ -425,9 +488,8 @@
     
       <div id="progress"></div>
       <div id="error"></div>
-      <p id="summary">
-      
-      </p>
+      <p id="summary"></p>
+      <p id="summary_footer"></p>
       <div class="input-group">
         <div class="input-group-prepend">
           <span class="input-group-text" id="crums_result_type"> ? </span>
