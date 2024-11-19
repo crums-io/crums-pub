@@ -5,18 +5,18 @@
   <groupId>io.crums</groupId>
   <artifactId>timechain</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0-ALPHA</version>
   
   
   <properties>
-    <revision>0.1.0-SNAPSHOT</revision>
+    <revision>0.1.0-ALPHA</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>22</maven.compiler.release>
-    <crums.util>1.0.4-SNAPSHOT</crums.util>
-    <crums.jsonimple>1.0.4-SNAPSHOT</crums.jsonimple>
-    <crums.mrkl>1.1.0-SNAPSHOT</crums.mrkl>
+    <crums.util>1.0.4</crums.util>
+    <crums.jsonimple>1.0.4</crums.jsonimple>
+    <crums.mrkl>1.1.0</crums.mrkl>
     <crums.stowkwik>1.0.2</crums.stowkwik>
-    <crums.sldg>0.6.0-SNAPSHOT</crums.sldg>
+    <crums.sldg>0.6.0-ALPHA</crums.sldg>
   </properties>
   
   <name>${project.groupId}::${project.artifactId}</name>
@@ -183,7 +183,7 @@
             &nbsp;GNU Affero General Public License v3
             (<a href="https://www.gnu.org/licenses/agpl-3.0.txt">AGPL</a>)
             </td>
-            <td style="text-align: right;"><br/>&copy; 2020-2024 <a href="http://crums.io">crums.io</a> All Rights Reserved.&nbsp;&nbsp;</td>
+            <td style="text-align: right;"><br/>&copy; 2020-2024 <a href="https://crums.io">crums.io</a> &nbsp;&nbsp;</td>
             </tr>
             </table>
             ]]>

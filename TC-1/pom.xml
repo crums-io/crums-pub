@@ -5,11 +5,11 @@
   <groupId>io.crums</groupId>
   <artifactId>crums-core</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>1.0.1-SNAPSHOT</version>
+  <version>1.0.1-DEPRECATED</version>
   
   
   <properties>
-    <revision>1.0.1-SNAPSHOT</revision>
+    <revision>1.0.1-DEPRECATED</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
     <crums.util>1.0.3</crums.util>
@@ -21,7 +21,8 @@
   <url>https://crums.io/project/crums-pub</url>
   
   <description>
-    Legacy crums core library.
+    Legacy crums core library. To be removed after upstream dependent
+    libraries (skipledger submodules) are refactored.
   </description>
   
   
