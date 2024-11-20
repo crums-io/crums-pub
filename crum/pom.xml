@@ -5,14 +5,14 @@
   <groupId>io.crums</groupId>
   <artifactId>crum-cli</artifactId>
   <!-- keep in sync w/ {revision} property, or add "flatten" plugin -->
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0-ALPHA</version>
   
   
   <properties>
-    <revision>0.1.0-SNAPSHOT</revision>
+    <revision>0.1.0-ALPHA</revision>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>22</maven.compiler.release>
-    <crums.timechain>0.1.0-SNAPSHOT</crums.timechain>
+    <crums.timechain>0.1.0-ALPHA</crums.timechain>
     <crums.stowkwik>[1.0.2,)</crums.stowkwik>
     <main.class>io.crums.tc.cli.crum.Main</main.class>
   </properties>
@@ -146,6 +146,22 @@
         </executions>
       </plugin>
       
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.2.2</version>
+        
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+              <mainClass>${main.class}</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        
+      </plugin>
+      
       
       <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -177,7 +193,7 @@
             &nbsp;GNU Affero General Public License v3
             (<a href="https://www.gnu.org/licenses/agpl-3.0.txt">AGPL</a>)
             </td>
-            <td style="text-align: right;"><br/>&copy; 2020-2024 <a href="http://crums.io">crums.io</a> All Rights Reserved.&nbsp;&nbsp;</td>
+            <td style="text-align: right;"><br/>&copy; 2020-2024 <a href="https://crums.io">crums.io</a> &nbsp;&nbsp;</td>
             </tr>
             </table>
             ]]>
@@ -306,25 +322,8 @@
       <artifactId>picocli</artifactId>
       <version>4.6.3</version>
     </dependency>
-    
   
-    <!-- Test scope follows -->
-    
 
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>5.8.2</version>
-      <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>io.crums</groupId>
-      <artifactId>unit-io</artifactId>
-      <version>1.0.1</version>
-      <scope>test</scope>
-    </dependency>
-    
   </dependencies>
   
   

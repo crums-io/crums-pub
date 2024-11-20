@@ -6,5 +6,5 @@ module io.crums.tc.cli.crum {
   requires io.crums.stowkwik;
   requires info.picocli;
   opens io.crums.tc.cli.crum to info.picocli;
-  
+  exports io.crums.tc.cli.crum;
 }
