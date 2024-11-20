@@ -18,10 +18,10 @@
   </properties>
   
   <name>${project.groupId}::${project.artifactId}</name>
-  <url>https://crums.io/project/crums-pub</url>
+  <url>https://github.com/crums-io/timechain</url>
   
   <description>
-  Notary REST server.
+  Crums Timechain REST server.
   </description>
   
   
@@ -220,6 +220,22 @@
             <autoReleaseAfterClose>true</autoReleaseAfterClose>
           </configuration>
         </plugin>
+
+        <plugin>
+          <artifactId>maven-jlink-plugin</artifactId>
+          <version>3.2.0</version>
+          <extensions>true</extensions>
+          <configuration>
+            <programs>
+              <program>
+                <mainClass>${main.class}</mainClass>
+                <id>ergd</id>
+              </program>
+            </programs>
+          
+          </configuration>
+          
+        </plugin>
         
         <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -294,11 +310,13 @@
       <version>${crums.notary}</version>
     </dependency>
     
+    <!--
     <dependency>
       <groupId>com.sun.net.httpserver</groupId>
       <artifactId>http</artifactId>
       <version>20070405</version>
     </dependency>
+    -->
     
     <dependency>
       <groupId>info.picocli</groupId>
