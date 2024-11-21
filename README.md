@@ -46,7 +46,7 @@ Clone the following repositories (in addition to this repo):
 
 1. [merkle-tree](https://github.com/crums-io/merkle-tree) - Merkle tree implementation.
 1. [io-util](https://github.com/crums-io/io-util) - Multi-module, utilies.
-1. [stowkwik] (https://github.com/crums-io/stowkwik) - Hash filepath object store.
+1. [stowkwik](https://github.com/crums-io/stowkwik) - Hash filepath object store.
 1. [skipledger](https://github.com/crums-io/skipledger) - Commitment scheme.
 
 Build these repos using in the above order, using
