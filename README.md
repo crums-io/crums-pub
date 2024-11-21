@@ -1,16 +1,17 @@
 # Crums Timechain (Alpha)
 
-This is the source repo for the Crums timechain. I'm developing a new version
-of the timechain. Unlike its previous incarnation, this repo now includes both
-client- *and* server-side code. (The client for the legacy chain is archived 
-under the [TC-1](https://github.com/crums-io/crums-pub/tree/main/TC-1) subdirectory.)
+Welcome to the first release of the Crums Timechain,
+a key-less solution for generating cryptographic timestamps at scale.
+Conceptually, a timechain is a chain of 64-byte blocks, generated at a constant,
+steady rate (set at inception), using a cryptographic commitment scheme that
+records evidence about when things (as represented by their SHA-256 hashes) occur.
+The [project documentation page](https://crums-io.github.io/timechain/) details a
+conceptual overview of timechains and how their proof structures work.
 
-The [project documentation page](https://crums-io.github.io/crums-pub/) details
-a conceptual overview of timechains and their proof structures.
+The project is organized in 4 modules, listed below.
+The last 2, are end-user programs.
 
-Presently, this is organized as 4 modules:
-
-1. [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain) - Defines
+1. [timechain](./timechain) - Defines
 the basic timechain, and its proof structures. Additionally, it provides client-side
 code for accessing a timechain.
 2. [notary](https://github.com/crums-io/crums-pub/tree/main/notary) - This module
@@ -23,7 +24,7 @@ embedded HTTP REST server launched from the command line. New timechains can als
 incepted (created) thru this CLI.
 4. [crum](https://github.com/crums-io/crums-pub/tree/main/crum) - This client-side CLI
 posts SHA-256 hashes to timechain servers and archives permanent witness receipts
-(called *crum trails*) in a user repo.
+(called *crumtrails*) in a user repo.
 
 ## Status
 
@@ -31,56 +32,55 @@ The first (alpha) version is nearing release. It works.
 
 ### What's missing
 
-The most glaring TODOs:
+TODOs:
 
-* ~~Command line timechain client. (There'll be *something* on first release.)~~ CLI mostly checked off.
-    * ~~witness~~
-    * ~~verify crumtrail~~
-    * ~~update block proof (in crumtrail) from timechain~~
-* ~~Client-side storage and archival of crumtrails (witness proofs) needs work. As a chain evolves (as it accumulates new blocks) the block proofs in archived crumtrails can be updated *en mass*.
-With a bit of planning, this can be made efficient, since crumtrails from the same chain share
-the same lineage and therefore share common information.~~
 * Need to work out details about how otherwise independent timechains on the network can choose to record one another's state in order to assert each others' bona fides.
-* Broken landing page (To be fixed before release).
-* Snapshot build script.
+* Multi-project build script.
 
-## Building the SNAPSHOT
+## Building from source
 
 The project's build tool is Maven. It uses Java's new virtual threads, so JDK 22
-is a minimum requirement. Presently, SNAPSHOT versions are not published
-anywhere. Much has been refactored across projects and much remains before the SNAPSHOT
-moniker can be dropped. To build this project, you'll have to clone and build a number
-of dependencies yourself. Clone the following projects in the suggested order, and build
-each using
+is a minimum requirement.
+
+Clone the following repositories (in addition to this repo):
+
+1. [merkle-tree](https://github.com/crums-io/merkle-tree) - Merkle tree implementation.
+1. [io-util](https://github.com/crums-io/io-util) - Multi-module, utilies.
+1. [stowkwik] (https://github.com/crums-io/stowkwik) - Hash filepath object store.
+1. [skipledger](https://github.com/crums-io/skipledger) - Commitment scheme.
+
+Build these repos using in the above order, using
 
 >   $ mvn clean install
 
+The last build, the `skipledger` module, succeeds in building the base submodule
+`skipledger-base` but *fails* to build related submodules. You can ignore those build
+failures. (The skipledger submodules that don't build depend on an older versions of
+this repo, now are archived under the `TC-1` subdirectory here in this repo.
+If you build the legacy TC-1 in this repo first, then all `skipledger` should build.)
+
+Next, build this project's library modules (in their respective subdir) in the
+following order:
+
+1. [timechain](./timechain/). Base lib. Both clients and server know about.
+1. [notary](./notary). Server-side engine.
+
+Finally, build the 2 deliverables
+
+* [ergd](./ergd). Timechain server launch CLI, and
+* [crum](./crum). Multi-chain client CLI with local (crumtrail) repo
+
+using
+
+  >   $ mvn clean package appassembler:assemble
+
+ In their directories subdirectories, give these a try:
+
+  >   ./target/binary/bin/ergd -h 
+
+  >   ./target/binary/bin/crum -h
 
 
-1. [merkle-tree](https://github.com/crums-io/merkle-tree) - Merkle tree implementation. Dependencies: none.
-1. [io-util](https://github.com/crums-io/io-util) - Small, multi-module, utility library. Dependencies: none.
-1. `$ cd TC-1` - Build the legacy client (the TC-2 subdir in *this* repo). This is slated for removal after refactorings across this and the next project (skipledger) are completed. Dependencies: `merkle-tree`, `io-util`.
-1. [skipledger](https://github.com/crums-io/skipledger) - Base module defining the data
-structure and other modules for packaging proofs from general ledgers. This project used to
-know about this repo. The code was refactored so that the base layer no longer knows about
-this project (the relationship is in fact now reversed). Dependencies: `merkle-tree`, `io-util`, `tc-1`
-1. Clone *this* project, then `cd` into each of the follow subdirectories and build. Use the usual `mvn clean install`
-command to build the first 2 modules.
-
-    1. [timechain](https://github.com/crums-io/crums-pub/tree/main/timechain). Dependencies: `skipledger-base`.
-    2. [notary](https://github.com/crums-io/crums-pub/tree/main/notary). Dependencies: `timechain`, `stowkwik`.
-    3. [ergd](https://github.com/crums-io/crums-pub/tree/main/ergd). Dependencies: `notary`.
-    4. [crum](https://github.com/crums-io/crums-pub/tree/main/crum). Dependencies: `timechain`.
-
-   To build the last 2 modules, `ergd` (the server) and `crum` its CLI client, use
-         
-      >   $ mvn clean package appassembler:assemble
-      
-      In their respective subdirectories, give these a try..
-      
-      >   $ ./target/binary/bin/ergd -h
-      
-      >   $ ./target/binary/bin/crum -h
 
 
 
