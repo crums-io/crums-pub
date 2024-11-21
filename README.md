@@ -14,28 +14,18 @@ The last 2, are end-user programs.
 1. [timechain](./timechain) - Defines
 the basic timechain, and its proof structures. Additionally, it provides client-side
 code for accessing a timechain.
-2. [notary](https://github.com/crums-io/crums-pub/tree/main/notary) - This module
-implements the background daemon service that collects crums (witnessed hashes)
-and publishes their collective hash per block (bin) interval as the cargo hash of
+2. [notary](./notary) - Background daemon service that collects crums (witnessed hashes)
+and publishes their collective hash per block (time bin) interval as the cargo hash of
 the corresponding timechain block. The notary is designed to be safe under concurrent
 read/write access from multiple *processes* (not just threads).
-3. [ergd](https://github.com/crums-io/crums-pub/tree/main/ergd) - This is a standaolone,
-embedded HTTP REST server launched from the command line. New timechains can also be
-incepted (created) thru this CLI.
-4. [crum](https://github.com/crums-io/crums-pub/tree/main/crum) - This client-side CLI
-posts SHA-256 hashes to timechain servers and archives permanent witness receipts
+3. [ergd](./ergd) - Embedded HTTP REST server launched from the command line. New chains
+can also be incepted (created) thru this CLI.
+4. [crum](./crum) - Client-side CLI for remote timechains. Archives receipts
 (called *crumtrails*) in a user repo.
 
 ## Status
 
-The first (alpha) version is nearing release. It works.
-
-### What's missing
-
-TODOs:
-
-* Need to work out details about how otherwise independent timechains on the network can choose to record one another's state in order to assert each others' bona fides.
-* Multi-project build script.
+Near release.
 
 ## Building from source
 
@@ -45,24 +35,28 @@ is a minimum requirement.
 Clone the following repositories (in addition to this repo):
 
 1. [merkle-tree](https://github.com/crums-io/merkle-tree) - Merkle tree implementation.
-1. [io-util](https://github.com/crums-io/io-util) - Multi-module, utilies.
+1. [io-util](https://github.com/crums-io/io-util) - Multi-module utilies.
 1. [stowkwik](https://github.com/crums-io/stowkwik) - Hash filepath object store.
 1. [skipledger](https://github.com/crums-io/skipledger) - Commitment scheme.
 
-Build these repos using in the above order, using
+Build those repos in the above order, using
 
 >   $ mvn clean install
 
-The last build, the `skipledger` module, succeeds in building the base submodule
+The last build, `skipledger`, succeeds in building the base submodule
 `skipledger-base` but *fails* to build related submodules. You can ignore those build
-failures. (The skipledger submodules that don't build depend on an older versions of
-this repo, now are archived under the `TC-1` subdirectory here in this repo.
-If you build the legacy TC-1 in this repo first, then all `skipledger` should build.)
+failures.
 
-Next, build this project's library modules (in their respective subdir) in the
+(The skipledger submodules that don't build, depend on an older versions of
+this repo. That legacy code is now archived under the `TC-1` subdirectory here in this repo.
+If you build the legacy TC-1 in this repo first, then all `skipledger` submodules
+should build. They will be retrofitted to use this new timechain in subsequent
+releases.)
+
+Next, build this project's library modules (in their respective subdirectories) in the
 following order:
 
-1. [timechain](./timechain/). Base lib. Both clients and server know about.
+1. [timechain](./timechain/). Base library both clients and server know about.
 1. [notary](./notary). Server-side engine.
 
 Finally, build the 2 deliverables
@@ -74,7 +68,7 @@ using
 
   >   $ mvn clean package appassembler:assemble
 
- In their directories subdirectories, give these a try:
+ In their respective subdirectories, give these a try:
 
   >   ./target/binary/bin/ergd -h 
 
@@ -87,5 +81,4 @@ using
 ~ Babak
 
 November 2024
-
 
