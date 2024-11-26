@@ -15,6 +15,7 @@ import java.util.logging.LogManager;
 import com.sun.net.httpserver.HttpServer;
 
 import io.crums.tc.ChainParams;
+import io.crums.tc.Constants;
 import io.crums.tc.NotaryPolicy;
 import io.crums.tc.TimeBinner;
 import io.crums.tc.notary.Notary;
@@ -40,7 +41,7 @@ import picocli.CommandLine.Spec;
 @Command(
     name = Ergd.NAME,
     mixinStandardHelpOptions = true,
-    version = "ergd 0.1.0-ALPHA",
+    version = Ergd.VERSION,
     description = {
       "Timechain notary REST service configuration and launcher.%n",
     },
@@ -52,6 +53,7 @@ import picocli.CommandLine.Spec;
 public class Ergd {
 
   final static String NAME = "ergd";
+  final static String VERSION = NAME + " " + Constants.VERSION;
 
   private final Object lock = new Object();
 

@@ -11,6 +11,19 @@ import io.crums.util.hash.Digests;
  */
 public class Constants {
 
+  /**
+   * Software version string. We don't have a <em>protocol</em> version, yet.
+   * <p>
+   * Note this is duplicated data (it follows the pom version, for now).
+   * It also makes its way into picocli version strings.
+   * </p>
+   */
+  public final static String VERSION = "0.1.0-ALPHA";
+
+  /**
+   * Default value "User-Agent" request headers take.
+   */
+  public final static String USER_AGENT = "crum/" + VERSION;
   
   public final static Digest DIGEST = Digests.SHA_256; 
 

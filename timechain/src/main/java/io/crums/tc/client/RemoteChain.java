@@ -114,6 +114,8 @@ public class RemoteChain implements NotaryService, Channel {
 
   private boolean compress;
 
+  private String userAgent = Constants.USER_AGENT;
+
 
   
   private HttpClient buildClient() {
@@ -226,6 +228,32 @@ public class RemoteChain implements NotaryService, Channel {
 
 
 
+  /**
+   * Sets the "User-Agent" request header value.
+   * 
+   * @param userAgent   not blank
+   * 
+   * @return          this instance
+   * 
+   * @see #userAgent()
+   */
+  public RemoteChain userAgent(String userAgent) {
+    if (userAgent == null || userAgent.trim().isEmpty())
+      throw new IllegalArgumentException("empty userAgent");
+    this.userAgent = userAgent.trim();
+    return this;
+  }
+
+
+  /**
+   * Returns the value set in the HTTP "User-Agent" request headers.
+   * 
+   * @see Constants#USER_AGENT
+   */
+  public final String userAgent() {
+    return userAgent;
+  }
+
 
 
   @Override
@@ -241,7 +269,10 @@ public class RemoteChain implements NotaryService, Channel {
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(url))
-            .timeout(Duration.ofSeconds(timeout)).GET().build();
+            .timeout(Duration.ofSeconds(timeout))
+            .setHeader("User-Agent", userAgent)
+            .GET()
+            .build();
 
     try {
 

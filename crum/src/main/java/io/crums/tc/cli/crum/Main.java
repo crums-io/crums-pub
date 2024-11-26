@@ -54,15 +54,11 @@ import picocli.CommandLine.ArgGroup;
 /**
  * Main launch class.
  * 
- * TODO commands
- * 
- * chain repo update (w/o witnessing anything new)
- * 
  */
 @Command(
   name = Main.NAME,
   mixinStandardHelpOptions = true,
-  version = "crum 0.1.0",
+  version = Main.VERSION,
   description = {
     "",
     "Records, archives, and retrieves SHA-256 timestamps proving within reasonable",
@@ -82,6 +78,7 @@ import picocli.CommandLine.ArgGroup;
 public class Main {
 
   final static String NAME = "crum";
+  final static String VERSION = NAME + " " + Constants.VERSION;
 
 
 
