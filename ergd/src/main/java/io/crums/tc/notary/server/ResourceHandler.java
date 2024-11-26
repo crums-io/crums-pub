@@ -74,7 +74,8 @@ public class ResourceHandler implements HttpHandler {
       
       var out = exchange.getResponseBody();
       closer.pushClose(out);
-      
+
+      HttpServerHelp.setServer(exchange);
       exchange.sendResponseHeaders(200, buffer.remaining());
       var ch = Channels.newChannel(out);
       do {

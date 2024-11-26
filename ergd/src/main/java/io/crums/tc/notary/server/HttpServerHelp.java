@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Babak Farhang
+ * Copyright 2024 Babak Farhang
  */
 package io.crums.tc.notary.server;
 
@@ -18,6 +18,11 @@ import io.crums.util.Strings;
 
 /**
  * Utility methods for {@code HttpHandler}s.
+ * <p>
+ * Note: excepting the fact the HTTP response "Server" header is fixed here,
+ * this code could be morphed into a utility for using the {@code httpserver},
+ * generally.
+ * </p>
  */
 public class HttpServerHelp {
   // no one calls
@@ -88,6 +93,7 @@ public class HttpServerHelp {
 
     var msgBytes = msg.getBytes(Strings.UTF_8);
     MimeType.TEXT.setContentType(exchange);
+    setServer(exchange);
     exchange.sendResponseHeaders(httpStatus, msgBytes.length);
     try (var out = exchange.getResponseBody()) {
       out.write(msgBytes);
@@ -105,10 +111,20 @@ public class HttpServerHelp {
     
     var msgBytes = json.toString().getBytes(Strings.UTF_8);
     MimeType.JSON.setContentType(exchange);
+    setServer(exchange);
     exchange.sendResponseHeaders(httpStatus, msgBytes.length);
     try (var out = exchange.getResponseBody()) {
       out.write(msgBytes);
     }
+  }
+
+  /**
+   * Sets the "Server" response header.
+   * 
+   * @see ErgdConstants#SERVER
+   */
+  public static void setServer(HttpExchange exchange) {
+    exchange.getResponseHeaders().set("Server", ErgdConstants.SERVER);
   }
   
   

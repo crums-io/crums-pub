@@ -40,7 +40,7 @@ import picocli.CommandLine.Spec;
 @Command(
     name = Ergd.NAME,
     mixinStandardHelpOptions = true,
-    version = "ergd 0.1",
+    version = "ergd 0.1.0-ALPHA",
     description = {
       "Timechain notary REST service configuration and launcher.%n",
     },
