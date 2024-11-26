@@ -194,6 +194,7 @@ class PortOpt {
     if (port <= 0 || port > Short.MAX_VALUE)
       throw new ParameterException(
           spec.commandLine(), "out-of-bounds: --port " + port);
+    this.port = port;
   }
   
   
