@@ -1,10 +1,11 @@
-# crum User Guide (ALPHA)
+![](./logo.png)
+# `crum` User Guide (ALPHA)
 
 `crum` is a command line program for generating key-less, cryptographic
 timestamps on remote timechains and archiving them in a local repo.
 This guide is meant to compliment information available thru the `help` command.
 
-## peek Command
+## `peek` Command
 
 Looks up the timechain at the given URL and prints its properties and
 current block no. after validating its latest block proof. (It's actually
@@ -134,7 +135,7 @@ host.
 Every `crum` user has (or potentially has) a default repo in their home directory
 named `.crums`.
 
-## wit
+## `wit`
 
 Creating a timestamp (crumtrail) is a 2 step process. You first drop the hash to the
 timechain using this command and receive a receipt. You then *wait* for the (time) block
@@ -170,7 +171,7 @@ Note, `crum` will not witness a hash on a timechain, if the local chain repo alr
 contains a crumtrail for that hash.
 
 
-## seal
+## `seal`
 
 When a timechain witnesses a hash thru the `wit` command, a temporary receipt
 is first saved in the repo. It contains the UTC time it was witnessed at the server
@@ -183,7 +184,7 @@ every crumtrail in that chain repo to the latest state (block) of the timechain.
 
 This patching behavior is a free side-effect of witnessing stuff.
 
-## patch
+## `patch`
 
 You don't have to `wit` (and `seal`) in order to bring the local state of a
 chain repo forward to the present. Indeed, if there is nothing new to witness,
@@ -195,7 +196,7 @@ it has dispensed. Tho you can always delay recording the (near) current state
 of a timechain (relying on its REST network interface), it's always a good idea
 to keep chain operators honest by monitoring their chain state.
 
-## find
+## `find`
 
 The option to emit JSON arguably does not serve any useful purpose in this first version.
 The next version will support *ingesting* (recording) crumtrails in a local repo,

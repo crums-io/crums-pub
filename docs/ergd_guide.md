@@ -1,9 +1,10 @@
-# ergd User Guide (ALPHA)
+![](./logo.png)
+# `ergd` User Guide (ALPHA)
 
 `ergd` is a command line program for incepting and launching a timechain service.
 This guide is meant to compliment information available thru the `help` command.
 
-## incept Command
+## `incept` Command
 
 Incepts a *new* timechain in a target path and launches the server immediately.
 A number of parameters can be set at inception (see `ergd help incept`).
@@ -47,7 +48,7 @@ client has to retrieve a receipt once its committed. The system is not designed
 to have a large buffer. It defaults to 64 blocks. In real time, this amounts
 to 64 x the block duration (in turn, determined by the chain's bin exponent--see above).
 
-## run Command
+## `run` Command
 
 Launches a timechain server REST server from an existing timechain directory.
 There are 2 scenarios in which a timechain is launched:
@@ -84,10 +85,22 @@ quality-of-service / type-of-service issue.
 
 ## Entropy Daemon
 
-There is a daemon thread that submits secure, pseudo-random SHA-256 hashes,
-roughly twice per block. A chain gathers entropy with use: the entropy daemon
-is meant as a stop-gap mechanism for the chain to gather entropy during periods
-of user inactivity. In future versions, a timechain may opt to seed its entropy
-daemon with state from other timechains.
+There is a daemon thread that drops secure, pseudo-random SHA-256 hashes
+to be witnessed, roughly twice per block. A chain gathers entropy with use:
+the entropy daemon is meant as a stop-gap mechanism for the chain to gather entropy during periods of user inactivity.
+
+Note there are actually 2 sources of entropy for each hash dropped by the daemon:
+the pseudo-random hash itself, and the UTC time it was dropped in. The latter
+factor is influenced by myriad of other processes running on the same machine
+(or virtual machines). (Future versions, will support an opt-in to gather entropy
+using state from other timechains.)
+
+## About Hostnames
+
+Presently, in the multi-chain repos it maintains, the client CLI `crum` identifies
+timechains only by their hostnames. So, unless hostnames are
+aliased, `crum` recognizes at most one timechain per host (per repo). The plan
+is for future versions of `crum` to support this "aliasing" internally;
+for now you should know about this limitation.
 
 
