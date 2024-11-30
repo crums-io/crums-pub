@@ -48,9 +48,11 @@ the span of time each block no. represents. Specifically,
 a block numbered `block_no` spans an interval of time beginning at
 >   
     inception_utc + (block_no - 1) x (block_duration)
+
 (inclusive), and ending at
 >   
     inception_utc + (block_no) x (block_duration)
+
 (exclusive).
 
 Notice, this figure, expressed in milliseconds is a power of 2
@@ -74,6 +76,7 @@ their receipts in this window of time from the server.
 In the example above, this translates to a TTL (after block commit) of
 >   
     64 x 2.048s
+
 or, about 131 seconds.
 
 ### Blocks searched
@@ -152,7 +155,7 @@ run against a test server..
 >   
     $ crum wit --origin http://localhost:8080 -F myFile.md 
     Initializing repo chain for http://localhost:8080
-    [WIT]    63eed3e18d4407595608d613a0fb71a6dc7363fc7d653d6c4a6c82de5942b093
+    [NOTED]  63eed3e18d4407595608d613a0fb71a6dc7363fc7d653d6c4a6c82de5942b093
              2024-11-22T22:56:46.227-0700   (Block 1955809)
              sealable in about 4 seconds
     waiting..
@@ -188,13 +191,14 @@ This patching behavior is a free side-effect of witnessing stuff.
 
 You don't have to `wit` (and `seal`) in order to bring the local state of a
 chain repo forward to the present. Indeed, if there is nothing new to witness,
-then this command is way more efficient, both in (disk) space and time (single,
+then this command is way more efficient, both in (disk) space and time (a single,
 read-only, REST "state" call).
 
-The state of a timechain is meant to be distributed through the block proofs
+The state of a timechain is meant to be distributed via the block proofs
 it has dispensed. Tho you can always delay recording the (near) current state
 of a timechain (relying on its REST network interface), it's always a good idea
-to keep chain operators honest by monitoring their chain state.
+to keep chain operators honest by monitoring and recording their chain state via
+this command.
 
 ## `find`
 

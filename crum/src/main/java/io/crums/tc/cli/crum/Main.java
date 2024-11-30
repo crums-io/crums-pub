@@ -136,8 +136,8 @@ public class Main {
     final long millisToCommit = millisToCommit(policy, rcpt.blockNo());
     long sealInSeconds = (millisToCommit + 500L) / 1000L;
     Main.printf(
-      "[%s]    %s%n%8s %s   (Block %d)%n%8s sealable in about %s%n",
-      "@|bold,blue WIT|@",
+      "[%s]  %s%n%8s %s   (Block %d)%n%8s sealable in about %s%n",
+      "@|bold,blue NOTED|@",
       rcpt.crum().hashHex(),
       "",
       ansiDateCode(rcpt.crum().utc()),
