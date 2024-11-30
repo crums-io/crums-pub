@@ -4,6 +4,10 @@
 `ergd` is a command line program for incepting and launching a timechain service.
 This guide is meant to compliment information available thru the `help` command.
 
+#### About the name
+
+Ergo daemon.
+
 ## `incept` Command
 
 Incepts a *new* timechain in a target path and launches the server immediately.
@@ -50,7 +54,7 @@ to 64 x the block duration (in turn, determined by the chain's bin exponent--see
 
 ## `run` Command
 
-Launches a timechain server REST server from an existing timechain directory.
+Launches a timechain REST server from an existing timechain directory.
 There are 2 scenarios in which a timechain is launched:
 
 ### "Restart" Scenario
@@ -72,8 +76,8 @@ support both scaling load, and upgrades (without bringing the service down).
 ## Stopping
 
 There is no stop command. The server is stopped via the kill signal (Ctrl-C
-in most terminals), or by any other means that kills the process but not the file
-system.
+in most terminals), or by any other means that kills the process (but not the file
+system the timechain is mounted on).
 
 ## About Zeroes
 
@@ -91,7 +95,7 @@ the entropy daemon is meant as a stop-gap mechanism for the chain to gather entr
 
 Note there are actually 2 sources of entropy for each hash dropped by the daemon:
 the pseudo-random hash itself, and the UTC time it was dropped in. The latter
-factor is influenced by myriad of other processes running on the same machine
+factor is influenced by a myriad of other processes running on the same machine
 (or virtual machines). (Future versions, will support an opt-in to gather entropy
 using state from other timechains.)
 
