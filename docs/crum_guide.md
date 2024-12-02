@@ -14,7 +14,7 @@ test timechain:
 
 >   
     $ /opt/crum/bin/crum peek http://localhost:8080
-
+    
     Inception:         2024-10-07T15:18:30.912-0600
     Block rate:        every 2.048 seconds
     Block commit lag:  1.024 seconds
@@ -60,6 +60,12 @@ Notice, this figure, expressed in milliseconds is a power of 2
 block rate is expressed as the *exponent* this power of 2 takes
 (the `binExponent` in the server's JSON).
 
+The bin exponent (`binExponent`) expresses block time boundaries globally (no matter
+the timechain). Blocks in timechains at the same exponent begin and
+end at the same UTC boundaries (in millis); blocks in timechains at different
+bin exponents are aligned so that chunkier timechain block boundaries always align with
+finer timechain block boundaries.
+
 
 ### Block commit lag
 
@@ -103,18 +109,19 @@ the current block no. (above).
 
 ## Local repos
 
-Most `crum` commands interact a local repo (all but the `peek` command
+Most `crum` commands interact with a local repo (all but the `peek` command
 in the current release). Every local repo supports archiving information
 and recording *crumtrails* (witness receipts) from *multiple* timechains.
 Each local repo maintains information about each timechain in indepedent
 sub-repos called *chain repos*.
 
 Crumtrails from the same timechain share common (hash) information and
-it is advantageous to manage them together. Crumtrails
-take collectively less disk space in a repo than they do individually.
+it is advantageous to manage them together. They
+take collectively less disk space in a repo than when saved individually.
 But more importantly, every time `crum` drops a new (just witnessed)
-crumtrail in the repo, it automatically also updates the block proofs for
-every existing crumtrail in the repo (for that timechain).
+crumtrail into a repo, it also updates the block proofs for
+every existing crumtrail in that repo (for that timechain). (See
+[seal](#seal) and [patch](#patch)).
 
 Repos do not index crumtrails by date: crumtrails are only indexed by
 hashes (lexicographic order of hash witnessed).
@@ -144,15 +151,16 @@ Creating a timestamp (crumtrail) is a 2 step process. You first drop the hash to
 timechain using this command and receive a receipt. You then *wait* for the (time) block
 in which your hash was witnessed to commit on the timechain. Finally, you retrieve
 the "cured" crumtrail from the timechain using the [seal](#seal) command.
-(That's 3 steps, if we count waiting as a step.) On a "fast" timechains,
+(That's 3 steps, if we count waiting as a step.) On "fast" timechains,
 `crum` performs these steps automatically. When it doesn't (either because
-the `--no-wait` option is used, or because the timechain is too "slow" for
+the `--no-wait` option was used, or because the timechain is too "slow" for
 the default wait behavior to kick in), you'll have to follow up with a `seal` command.
 
 The first time you run this command, it might look like something like below
 run against a test server..
 
->   
+>
+    
     $ crum wit --origin http://localhost:8080 -F myFile.md 
     Initializing repo chain for http://localhost:8080
     [NOTED]  63eed3e18d4407595608d613a0fb71a6dc7363fc7d653d6c4a6c82de5942b093
@@ -165,7 +173,7 @@ run against a test server..
     $ 
 
 `crum` creates a [default user repo](#default-repo) and stores a crumtrail
-in it. Since `example.crums.io` is the only timechain server the repo knows about,
+in it. Since `localhost` is the only timechain server the repo knows about,
 it is for now, the repo's [default host](#default-host). From here on, if you
 omit the `--origin <URL>` option with this command, `crum` will assume you meant the
 timechain at the same URL.
@@ -199,6 +207,15 @@ it has dispensed. Tho you can always delay recording the (near) current state
 of a timechain (relying on its REST network interface), it's always a good idea
 to keep chain operators honest by monitoring and recording their chain state via
 this command.
+
+### Death of a Timechain
+
+If you accumulate crumtrails from a timechain that has died, a first step in the recovery
+process is to witness on another chain, the hash of the last block you know about from
+this now dead chain. If this ritual were practiced periodically during the life of a chain,
+the crumtrails one accumulated would still have evidentiary value even after the chain had died.
+Future versions will support opt-in tools for "collective" evidence commitment (in multiple
+timechains).
 
 ## `find`
 
