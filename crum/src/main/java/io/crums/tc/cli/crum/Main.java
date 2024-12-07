@@ -63,7 +63,8 @@ import picocli.CommandLine.ArgGroup;
     "",
     "Records, archives, and retrieves SHA-256 timestamps proving within reasonable",
     "bounds when a hash was witnessed.",
-    "",
+    "See also",
+    "    https://crums-io.github.io/timechain/crum_guide.html%n"
   },
   subcommands = {
     HelpCommand.class,

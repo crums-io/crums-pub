@@ -43,7 +43,10 @@ import picocli.CommandLine.Spec;
     mixinStandardHelpOptions = true,
     version = Ergd.VERSION,
     description = {
-      "Timechain notary REST service configuration and launcher.%n",
+      "",
+      "Timechain notary REST service configuration and launcher.",
+      "See also",
+      "    https://crums-io.github.io/timechain/ergd_guide.html%n"
     },
     subcommands = {
         HelpCommand.class,
