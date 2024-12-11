@@ -8,6 +8,12 @@ This guide is meant to compliment information available thru the `help` command.
 
 Ergo daemon.
 
+## `--demo` option
+
+Use this option to get a better sense of how the API works. This provides a web UI
+(static reactive HTML) that uses the API and demo's its use (as for example at crums.io).
+Presently, this is only for testing purposes. (Static pages ought to be served some other way).
+
 ## `incept` Command
 
 Incepts a *new* timechain in a target path and launches the server immediately.

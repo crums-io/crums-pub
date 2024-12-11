@@ -96,7 +96,7 @@ public class Ergd {
   }
   
   
-  void launch(Notary notary, int port) throws IOException, InterruptedException {
+  void launch(Notary notary, int port, boolean withUi) throws IOException, InterruptedException {
     
     log().info("Launching REST server listening on port " + port);
     try (var onFail = new TaskStack()) {
@@ -113,7 +113,7 @@ public class Ergd {
 
       var server = HttpServer.create(new InetSocketAddress(port), 0);
 
-      for (var uh : UriHandler.all(notary))
+      for (var uh : UriHandler.all(notary, withUi))
         server.createContext(uh.uri(), uh.handler());
       
       var es = Executors.newVirtualThreadPerTaskExecutor();
@@ -186,13 +186,13 @@ class PortOpt {
   
   
   @Option(
-      names = { "--port", "-p" },
-      paramLabel = "PORT",
-      description = {
-          "Port no. REST service listens on",
-          "Default: 8080"
-      }
-      )
+    names = { "--port", "-p" },
+    paramLabel = "PORT",
+    description = {
+      "Port no. REST service listens on",
+      "Default: 8080"
+    }
+  )
   public void setPort(int port) {
     if (port <= 0 || port > Short.MAX_VALUE)
       throw new ParameterException(
@@ -205,6 +205,16 @@ class PortOpt {
     return port;
   }
   
+}
+
+
+class DemoOpt {
+
+  @Option(
+    names = "--demo",
+    description = "Include demo website (for testing only)"
+  )
+  boolean demo;
 }
 
 
@@ -329,7 +339,8 @@ class Incept implements Callable<Integer> {
   @Mixin
   private PortOpt port;
   
-  
+  @Mixin
+  private DemoOpt demo;
   
   
   @Override
@@ -351,7 +362,8 @@ class Incept implements Callable<Integer> {
     out.println(" ==============================");
 
     var notary = Notary.incept(dirOpt.rootDir(), settings, ergd.log());
-    ergd.launch(notary, port.no());
+    boolean withUi = demo != null && demo.demo;
+    ergd.launch(notary, port.no(), withUi);
     return 0;
   }
   
@@ -385,6 +397,8 @@ class Run implements Callable<Integer> {
   @Mixin
   private PortOpt port;
 
+  @Mixin
+  private DemoOpt demo;
 
   @Override
   public Integer call() throws Exception {
@@ -394,7 +408,8 @@ class Run implements Callable<Integer> {
     out.println();
     notary.settings().toProperties().store(out, "Chain/notary settings");
     out.println();
-    ergd.launch(notary, port.no());
+    boolean withUi = demo != null && demo.demo;
+    ergd.launch(notary, port.no(), withUi);
     return 0;
   }
   
