@@ -7,11 +7,13 @@ Timechain command line REST client and local repo manager.
 
 To build, `cd` to this subdirectory, then
 
->  $ mvn clean package appassembler:assemble
+>
+      $ mvn clean package appassembler:assemble
 
 Try
 
->  $ ./target/binary/bin/crum -h
+>
+      $ ./target/binary/bin/crum -h
 
 to verify it worked.
 
@@ -26,17 +28,24 @@ Note the OS-specifc @file when built on each platform below.
 
 #### Linux
 
->  $ jpackage @jpckg/base @../jpckg/attrib @../jpckg/linux
+>
+      $ jpackage @jpckg/base @../jpckg/attrib @../jpckg/linux
 
 This generates an `.rpm` or `.deb` file, depending on distro.
 
 #### Mac
 
->  $ jpackage @jpckg/base @../jpckg/attrib @../jpckg/mac
+>
+       $ jpackage @jpckg/base @../jpckg/attrib @../jpckg/mac
 
 #### Windows
 
->  $ jpackage @jpckg/base @..\jpckg/attrib @..\jpckg/win
+The `@..\jpckg\file` does not work on windows. Copy those files first, from parent to local directory.
+
+>
+       $ copy ..\jpckg\attrib jpckg
+       $ copy ..\jpckg\win jpckg
+       $ jpackage @jpckg\base @jpckg\attrib @jpckg\win
 
 
 
