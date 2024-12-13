@@ -1,0 +1,5 @@
+-d target
+--name crum
+--module-path target/binary/lib
+--module io.crums.tc.cli.crum
+--description "crum: Crums Timechain client CLI"

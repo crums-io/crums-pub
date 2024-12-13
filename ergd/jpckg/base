@@ -1,0 +1,5 @@
+-d target
+--name ergd
+--module-path target/binary/lib
+--module io.crums.tc.notary.server
+--description "ergd: Crums Timechain REST server"

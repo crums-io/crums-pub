@@ -1,0 +1,42 @@
+crum
+=====
+
+Timechain command line REST client and local repo manager.
+
+### Build
+
+To build, `cd` to this subdirectory, then
+
+>  $ mvn clean package appassembler:assemble
+
+Try
+
+>  $ ./target/binary/bin/crum -h
+
+to verify it worked.
+
+
+### `jpackage` options
+
+To package a Java runtime use the `jpackage` command from *this* subdirectory
+using the option-setting @files below.
+Output is directed to the `target` subdirectory (the one maven creates).
+Note the OS-specifc @file when built on each platform below.
+
+
+#### Linux
+
+>  $ jpackage @jpckg/base @../jpckg/attrib @../jpckg/linux
+
+This generates an `.rpm` or `.deb` file, depending on distro.
+
+#### Mac
+
+>  $ jpackage @jpckg/base @../jpckg/attrib @../jpckg/mac
+
+#### Windows
+
+>  $ jpackage @jpckg/base @..\jpckg/attrib @..\jpckg/win
+
+
+
