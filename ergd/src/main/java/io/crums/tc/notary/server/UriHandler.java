@@ -24,49 +24,14 @@ public record UriHandler(String uri, HttpHandler handler) {
   }
 
 
-  public static UriHandler[] all(Notary notary) {
-    return all(notary, new ServerSettings(notary.settings()));
-  }
 
-
-  public static UriHandler[] all(Notary notary, ServerSettings settings) {
-    
-    UriHandler[] all = {
-      new UriHandler(
-        "/",
-        new ResourceHandler()),
-      new UriHandler(
-        Constants.Rest.POLICY_URI,
-        new ApiHandlers.PolicyHandler(notary, settings)),
-      new UriHandler(
-        Constants.Rest.WITNESS_URI,
-        new ApiHandlers.WitnessHandler(notary, settings)),
-      new UriHandler(
-        Constants.Rest.UPDATE_URI,
-        new ApiHandlers.UpdateHandler(notary, settings)),
-      new UriHandler(
-        Constants.Rest.STATE_URI,
-        new ApiHandlers.StateHandler(notary, settings)),
-      new UriHandler(
-        Constants.Rest.VERIFY_URI,
-        new ApiHandlers.VerifyHandler(notary, settings)),
-      new UriHandler(
-        Constants.Rest.H_CODEC_URI,
-        new UtilHandlers.HashConverter()),
-      new UriHandler(
-        Constants.Rest.DATE_URI,
-        new UtilHandlers.UtcDatePrinter()),
-      
-    };
-
-    return all;
-  }
-
-
-
-
-
-
+  /**
+   * Returns a list of newly constructed handlers.
+   * 
+   * @param notary    the notary (most of) the handers are bound to (others are stateless)
+   * @param withUi    if {@code true}, then the static demo pages are also spun up; o.w.
+   *                  then only the REST {@code /api/*} endpoints are served
+   */
   public static List<UriHandler> all(Notary notary, boolean withUi) {
     // FIXME: none of the handlers depend on server settings (internal to notary)
     var settings = new ServerSettings(notary.settings()); 
