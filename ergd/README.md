@@ -7,11 +7,13 @@ Timechain REST server.
 
 To build, `cd` to this subdirectory, then
 
->  $ mvn clean package appassembler:assemble
+>
+      $ mvn clean package appassembler:assemble
 
 Try
 
->  $ ./target/binary/bin/ergd -h
+>
+      $ ./target/binary/bin/ergd -h
 
 to verify it worked.
 
