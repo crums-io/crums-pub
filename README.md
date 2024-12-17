@@ -23,10 +23,6 @@ can also be incepted (created) thru this CLI.
 4. [crum](./crum) - Client-side CLI for remote timechains. Archives receipts
 (called *crumtrails*) in a user repo.
 
-## Status
-
-Near release.
-
 ## Building from source
 
 The project's build tool is Maven. It uses Java's new virtual threads, so JDK 22

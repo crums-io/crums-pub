@@ -267,7 +267,7 @@ condoned or not, is not counterproductive.
 I'm a bit ambivalent about signing. I don't think timechains should sign their data: their REST API
 endpoints are sufficiently identifying (especially, if exposed over HTTPS). There is
 nothing wrong with building a brand around a timechain in terms of quality of service, trustworthiness,
-etc. But the *trust-but-verify* maxim should still be operative, no matter who's timechain it is.
+etc. But the *trust-but-verify* maxim should still be operative, no matter whose timechain it is.
 
 
 ## Scaling
