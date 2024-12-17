@@ -57,7 +57,7 @@ public class RemoteChain implements NotaryService, Channel {
    */
   public static URI remoteURI(String scheme, String host) {
     try {
-      URI uri = new URI(scheme.toLowerCase() + "//" + host.toLowerCase());
+      URI uri = new URI(scheme.toLowerCase() + "://" + host.toLowerCase());
       checkHostUri(uri);
       return uri;
     } catch (URISyntaxException usx) {
